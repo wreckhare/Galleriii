@@ -164,39 +164,48 @@ export default function PublicGalleryViewer() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F9F8F6] flex items-center justify-center">
-        <div className="text-foreground text-lg">Loading...</div>
+      <div className="min-h-screen bg-[#F9F8F6] flex flex-col items-center justify-center">
+        <div className="text-foreground/40 text-sm">Loading...</div>
+        <p className="absolute bottom-8 text-sm font-medium text-foreground/20 tracking-wide">
+          galleriii
+        </p>
       </div>
     );
   }
 
   if (error || !user) {
     return (
-      <div className="min-h-screen bg-[#F9F8F6] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[#F9F8F6] flex flex-col items-center justify-center px-6">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            {error === 'User not found' ? '404' : 'Error'}
+          <h1 className="text-5xl font-light text-foreground/15 mb-6">
+            {error === 'User not found' ? '404' : '!'}
           </h1>
-          <p className="text-foreground/70 mb-4">{error || 'Something went wrong'}</p>
+          <p className="text-foreground/60 mb-2">{error || 'Something went wrong'}</p>
           {error === 'User not found' && (
-            <p className="text-sm text-foreground/50">
-              The user @{username} does not exist
+            <p className="text-sm text-foreground/40">
+              @{username} does not exist
             </p>
           )}
         </div>
+        <p className="absolute bottom-8 text-sm font-medium text-foreground/20 tracking-wide">
+          galleriii
+        </p>
       </div>
     );
   }
 
   if (!currentGallery || mediaBlocks.length === 0) {
     return (
-      <div className="min-h-screen bg-[#F9F8F6] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[#F9F8F6] flex flex-col items-center justify-center px-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-2">No Galleries Yet</h1>
-          <p className="text-foreground/70">
-            @{username} hasn't created any public galleries yet
+          <h1 className="text-lg font-medium text-foreground mb-2">No Galleries Yet</h1>
+          <p className="text-foreground/50 text-sm">
+            @{username} hasn't created any public galleries
           </p>
         </div>
+        <p className="absolute bottom-8 text-sm font-medium text-foreground/20 tracking-wide">
+          galleriii
+        </p>
       </div>
     );
   }
@@ -210,17 +219,17 @@ export default function PublicGalleryViewer() {
             <RefreshCw className="w-6 h-6 animate-spin text-foreground/50" />
           </div>
         )}
-        <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto px-6 pt-16 pb-12 safe-area-inset">
           {/* Gallery Title */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">
+          <div className="mb-10">
+            <p className="text-sm text-foreground/50 mb-2">@{username}</p>
+            <h1 className="text-2xl font-semibold text-foreground leading-tight">
               {currentGallery.title}
             </h1>
-            <p className="text-sm text-foreground/50">@{username}</p>
           </div>
 
           {/* Media Blocks */}
-          <div className="space-y-6">
+          <div className="space-y-8">
             {mediaBlocks.map((block) => (
               <div key={block.id} className="w-full">
                 <MediaBlockComponent block={block} />
@@ -229,16 +238,23 @@ export default function PublicGalleryViewer() {
           </div>
 
           {/* Next Gallery Button */}
-          <div className="mt-12 flex flex-col items-center gap-4">
+          <div className="mt-16 flex flex-col items-center gap-3">
             <button
               onClick={handleNextClick}
               disabled={loadingNext}
-              className="bg-foreground text-background px-8 py-3 rounded-lg font-medium hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full max-w-xs bg-foreground text-background px-8 py-4 rounded-xl font-medium hover:bg-foreground/90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              View Next Gallery
+              {loadingNext ? 'Loading...' : 'View Next Gallery'}
             </button>
-            <p className="text-sm text-foreground/40">
+            <p className="text-xs text-foreground/40">
               or pull down to refresh
+            </p>
+          </div>
+
+          {/* Footer Branding */}
+          <div className="mt-20 pb-8 flex flex-col items-center">
+            <p className="text-sm font-medium text-foreground/30 tracking-wide">
+              galleriii
             </p>
           </div>
         </div>
