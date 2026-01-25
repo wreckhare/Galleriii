@@ -8,6 +8,24 @@ import { Gallery, User, MediaBlock } from '@/types/gallery';
 import Link from 'next/link';
 import { MediaBlock as MediaBlockComponent } from '@/components/media-blocks/MediaBlock';
 import { BlockEditor } from '@/components/media-blocks/BlockEditor';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical } from 'lucide-react';
 
 // Simple debounce function
 function debounce<T extends (...args: any[]) => any>(
@@ -19,6 +37,75 @@ function debounce<T extends (...args: any[]) => any>(
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };
+}
+
+// Sortable block component for drag-and-drop
+function SortableBlock({
+  block,
+  index,
+  onEdit,
+  onDelete,
+}: {
+  block: MediaBlock;
+  index: number;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: block.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`border border-gray-200 rounded-lg overflow-hidden ${
+        isDragging ? 'shadow-lg scale-[1.02] opacity-90 z-10' : ''
+      }`}
+    >
+      <div className="bg-gray-50 px-4 py-2 flex items-center justify-between border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 -ml-1 text-gray-400 hover:text-gray-600 touch-none"
+            aria-label="Drag to reorder"
+          >
+            <GripVertical className="w-5 h-5" />
+          </button>
+          <span className="font-mono text-sm text-foreground/60">{index + 1}</span>
+          <span className="font-medium text-foreground capitalize">{block.type}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+            onClick={onEdit}
+          >
+            Edit
+          </button>
+          <button
+            className="text-red-600 hover:text-red-700 text-sm font-medium"
+            onClick={onDelete}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+      <div className="p-4">
+        <MediaBlockComponent block={block} />
+      </div>
+    </div>
+  );
 }
 
 export default function EditGallery() {
@@ -39,6 +126,47 @@ export default function EditGallery() {
   const [editingBlock, setEditingBlock] = useState<MediaBlock | null>(null);
 
   const supabase = createClient();
+
+  // Setup drag-and-drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end for reordering blocks
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = mediaBlocks.findIndex((block) => block.id === active.id);
+      const newIndex = mediaBlocks.findIndex((block) => block.id === over.id);
+
+      const reorderedBlocks = arrayMove(mediaBlocks, oldIndex, newIndex).map(
+        (block, index) => ({ ...block, position: index })
+      );
+
+      // Update state immediately for smooth UX
+      setMediaBlocks(reorderedBlocks);
+
+      // Update positions in database
+      try {
+        for (const block of reorderedBlocks) {
+          await supabase
+            .from('media_blocks')
+            .update({ position: block.position })
+            .eq('id', block.id);
+        }
+      } catch (err) {
+        console.error('Error updating block positions:', err);
+      }
+    }
+  };
 
   // Load gallery and user data
   useEffect(() => {
@@ -351,41 +479,31 @@ export default function EditGallery() {
 
           {/* Media Blocks List */}
           {mediaBlocks.length > 0 ? (
-            <div className="space-y-4 mb-4">
-              {mediaBlocks.map((block, index) => (
-                <div
-                  key={block.id}
-                  className="border border-gray-200 rounded-lg overflow-hidden"
-                >
-                  <div className="bg-gray-50 px-4 py-2 flex items-center justify-between border-b border-gray-200">
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-sm text-foreground/60">{index + 1}</span>
-                      <span className="font-medium text-foreground capitalize">{block.type}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                        onClick={() => {
-                          setEditingBlock(block);
-                          setIsBlockEditorOpen(true);
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="text-red-600 hover:text-red-700 text-sm font-medium"
-                        onClick={() => handleDeleteBlock(block.id)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <MediaBlockComponent block={block} />
-                  </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={mediaBlocks.map((block) => block.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-4 mb-4">
+                  {mediaBlocks.map((block, index) => (
+                    <SortableBlock
+                      key={block.id}
+                      block={block}
+                      index={index}
+                      onEdit={() => {
+                        setEditingBlock(block);
+                        setIsBlockEditorOpen(true);
+                      }}
+                      onDelete={() => handleDeleteBlock(block.id)}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           ) : (
             <div className="text-center py-8 text-foreground/60">
               <p>No media blocks yet. Add your first block to get started!</p>

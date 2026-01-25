@@ -5,8 +5,6 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Gallery, User, MediaBlock } from '@/types/gallery';
 import { MediaBlock as MediaBlockComponent } from '@/components/media-blocks/MediaBlock';
-import PullToRefresh from 'react-pull-to-refresh';
-import { RefreshCw } from 'lucide-react';
 
 export default function PublicGalleryViewer() {
   const params = useParams();
@@ -19,7 +17,6 @@ export default function PublicGalleryViewer() {
   const [error, setError] = useState('');
   const [sessionId, setSessionId] = useState<string>('');
   const [loadingNext, setLoadingNext] = useState(false);
-  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
 
   const supabase = createClient();
 
@@ -146,14 +143,6 @@ export default function PublicGalleryViewer() {
     }
   };
 
-  // Handle pull-to-refresh
-  const handlePullRefresh = async () => {
-    if (!user || isPullRefreshing) return;
-    setIsPullRefreshing(true);
-    await loadRandomGallery(user.id);
-    setIsPullRefreshing(false);
-  };
-
   // Handle button click
   const handleNextClick = async () => {
     if (!user || loadingNext) return;
@@ -212,53 +201,42 @@ export default function PublicGalleryViewer() {
 
   return (
     <div className="min-h-screen bg-[#F9F8F6]">
-      <PullToRefresh onRefresh={handlePullRefresh} resistance={3}>
-        {/* Loading spinner for pull-to-refresh */}
-        {isPullRefreshing && (
-          <div className="flex justify-center py-4">
-            <RefreshCw className="w-6 h-6 animate-spin text-foreground/50" />
-          </div>
-        )}
-        <div className="max-w-2xl mx-auto px-6 pt-16 pb-12 safe-area-inset">
-          {/* Gallery Title */}
-          <div className="mb-10">
-            <p className="text-sm text-foreground/50 mb-2">@{username}</p>
-            <h1 className="text-2xl font-semibold text-foreground leading-tight">
-              {currentGallery.title}
-            </h1>
-          </div>
-
-          {/* Media Blocks */}
-          <div className="space-y-8">
-            {mediaBlocks.map((block) => (
-              <div key={block.id} className="w-full">
-                <MediaBlockComponent block={block} />
-              </div>
-            ))}
-          </div>
-
-          {/* Next Gallery Button */}
-          <div className="mt-16 flex flex-col items-center gap-3">
-            <button
-              onClick={handleNextClick}
-              disabled={loadingNext}
-              className="w-full max-w-xs bg-foreground text-background px-8 py-4 rounded-xl font-medium hover:bg-foreground/90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loadingNext ? 'Loading...' : 'View Next Gallery'}
-            </button>
-            <p className="text-xs text-foreground/40">
-              or pull down to refresh
-            </p>
-          </div>
-
-          {/* Footer Branding */}
-          <div className="mt-20 pb-8 flex flex-col items-center">
-            <p className="text-sm font-medium text-foreground/30 tracking-wide">
-              galleriii
-            </p>
-          </div>
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        {/* Gallery Title */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold text-foreground leading-tight">
+            {currentGallery.title}
+          </h1>
+          <p className="text-sm text-foreground/50 mt-2">@{username}</p>
         </div>
-      </PullToRefresh>
+
+        {/* Media Blocks */}
+        <div className="space-y-6">
+          {mediaBlocks.map((block) => (
+            <div key={block.id} className="w-full">
+              <MediaBlockComponent block={block} />
+            </div>
+          ))}
+        </div>
+
+        {/* Next Gallery Button */}
+        <div className="mt-12 flex flex-col items-center gap-4">
+          <button
+            onClick={handleNextClick}
+            disabled={loadingNext}
+            className="bg-foreground text-background px-8 py-3 rounded-lg font-medium hover:bg-foreground/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loadingNext ? 'Loading...' : 'View Next Gallery'}
+          </button>
+        </div>
+
+        {/* Footer Branding */}
+        <div className="mt-16 pb-8 flex flex-col items-center">
+          <p className="text-sm font-medium text-foreground/20 tracking-wide">
+            galleriii
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

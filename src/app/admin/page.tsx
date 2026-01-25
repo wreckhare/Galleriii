@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { User, Gallery } from '@/types/gallery';
 import Link from 'next/link';
+import { Eye, EyeOff, Copy, Check } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { user, loading } = useAuth();
@@ -15,6 +16,7 @@ export default function AdminDashboard() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [loadingGalleries, setLoadingGalleries] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [copied, setCopied] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -186,11 +188,17 @@ export default function AdminDashboard() {
                         {gallery.title}
                       </h3>
                       <div className="flex items-center gap-3 text-sm text-foreground/60">
-                        <span>
+                        <span className="flex items-center gap-1">
                           {gallery.is_hidden ? (
-                            <span className="text-gray-500">Hidden</span>
+                            <>
+                              <EyeOff className="w-4 h-4 text-gray-400" />
+                              <span className="text-gray-500">Hidden</span>
+                            </>
                           ) : (
-                            <span className="text-green-600">Visible</span>
+                            <>
+                              <Eye className="w-4 h-4 text-green-600" />
+                              <span className="text-green-600">Visible</span>
+                            </>
                           )}
                         </span>
                         <span>•</span>
@@ -232,17 +240,40 @@ export default function AdminDashboard() {
 
         {/* Public URL */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-900">
-            <strong>Your public gallery:</strong>{' '}
-            <a
-              href={`/${dbUser.username}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-blue-700"
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-blue-900">
+              <strong>Your public gallery:</strong>{' '}
+              <a
+                href={`/${dbUser.username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-blue-700"
+              >
+                {typeof window !== 'undefined' ? window.location.origin : ''}/{dbUser.username}
+              </a>
+            </p>
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/${dbUser.username}`;
+                navigator.clipboard.writeText(url);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 rounded-md transition-colors"
             >
-              {typeof window !== 'undefined' ? window.location.origin : ''}/{dbUser.username}
-            </a>
-          </p>
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  Copy
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

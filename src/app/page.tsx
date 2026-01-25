@@ -32,19 +32,16 @@ export default function Home() {
       <div className="max-w-md w-full space-y-8 text-center">
         {/* Logo/Brand */}
         <div>
-          <h1 className="text-5xl font-bold text-foreground mb-3">
+          <h1 className="text-5xl font-bold text-foreground">
             Galleriii
           </h1>
-          <p className="text-lg text-foreground/70">
-            Curate galleries to express yourself and showcase your aesthetic.
-          </p>
         </div>
 
         {/* Sign In Button */}
         <div className="pt-6">
           <button
             onClick={signIn}
-            className="w-full flex items-center justify-center gap-3 bg-white text-gray-700 px-6 py-3 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200 hover:bg-gray-50"
+            className="inline-flex items-center justify-center gap-3 bg-white text-gray-700 px-8 py-3 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200 hover:bg-gray-50"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
