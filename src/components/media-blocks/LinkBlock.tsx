@@ -16,7 +16,7 @@ export function LinkBlock({ url, title, description, image }: LinkBlockProps) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 hover:shadow-md transition-all duration-200"
+      className="block bg-white border border-gray-200 overflow-hidden hover:border-gray-300 hover:shadow-md transition-all duration-200"
     >
       {image && (
         <div className="w-full h-48 bg-gray-100 overflow-hidden">

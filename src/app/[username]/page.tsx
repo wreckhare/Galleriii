@@ -219,8 +219,8 @@ export default function PublicGalleryViewer() {
           ))}
         </div>
 
-        {/* Next Gallery Button */}
-        <div className="mt-12 flex flex-col items-center gap-4">
+        {/* Next Gallery Button - hidden on mobile */}
+        <div className="mt-12 hidden md:flex flex-col items-center gap-4">
           <button
             onClick={handleNextClick}
             disabled={loadingNext}
@@ -231,7 +231,7 @@ export default function PublicGalleryViewer() {
         </div>
 
         {/* Footer Branding */}
-        <div className="mt-16 pb-8 flex flex-col items-center">
+        <div className="mt-8 pb-4 flex flex-col items-center">
           <p className="text-sm font-medium text-foreground/20 tracking-wide">
             galleriii
           </p>

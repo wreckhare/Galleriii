@@ -33,7 +33,7 @@ export function MediaBlock({ block }: MediaBlockProps) {
 
     default:
       return (
-        <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 text-gray-500 text-center">
+        <div className="bg-gray-100 border border-gray-300 p-4 text-gray-500 text-center">
           <p className="text-sm">Unknown block type</p>
         </div>
       );

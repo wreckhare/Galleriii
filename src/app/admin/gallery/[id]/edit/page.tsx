@@ -8,24 +8,7 @@ import { Gallery, User, MediaBlock } from '@/types/gallery';
 import Link from 'next/link';
 import { MediaBlock as MediaBlockComponent } from '@/components/media-blocks/MediaBlock';
 import { BlockEditor } from '@/components/media-blocks/BlockEditor';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { GripVertical } from 'lucide-react';
+import { ChevronUp, ChevronDown, Eye, EyeOff } from 'lucide-react';
 
 // Simple debounce function
 function debounce<T extends (...args: any[]) => any>(
@@ -39,50 +22,57 @@ function debounce<T extends (...args: any[]) => any>(
   };
 }
 
-// Sortable block component for drag-and-drop
-function SortableBlock({
+// Block component with up/down reorder arrows
+function ReorderableBlock({
   block,
   index,
+  totalBlocks,
   onEdit,
   onDelete,
+  onMoveUp,
+  onMoveDown,
 }: {
   block: MediaBlock;
   index: number;
+  totalBlocks: number;
   onEdit: () => void;
   onDelete: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: block.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+  const isFirst = index === 0;
+  const isLast = index === totalBlocks - 1;
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`border border-gray-200 rounded-lg overflow-hidden ${
-        isDragging ? 'shadow-lg scale-[1.02] opacity-90 z-10' : ''
-      }`}
-    >
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
       <div className="bg-gray-50 px-4 py-2 flex items-center justify-between border-b border-gray-200">
         <div className="flex items-center gap-3">
-          <button
-            {...attributes}
-            {...listeners}
-            className="cursor-grab active:cursor-grabbing p-1 -ml-1 text-gray-400 hover:text-gray-600 touch-none"
-            aria-label="Drag to reorder"
-          >
-            <GripVertical className="w-5 h-5" />
-          </button>
+          <div className="flex flex-row gap-1">
+            <button
+              onClick={onMoveUp}
+              disabled={isFirst}
+              className={`p-1 ${
+                isFirst
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+              aria-label="Move up"
+            >
+              <ChevronUp className="w-5 h-5" strokeWidth={2.5} />
+            </button>
+            <button
+              onClick={onMoveDown}
+              disabled={isLast}
+              className={`p-1 ${
+                isLast
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+              aria-label="Move down"
+            >
+              <ChevronDown className="w-5 h-5" strokeWidth={2.5} />
+            </button>
+          </div>
           <span className="font-mono text-sm text-foreground/60">{index + 1}</span>
           <span className="font-medium text-foreground capitalize">{block.type}</span>
         </div>
@@ -121,50 +111,54 @@ export default function EditGallery() {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
   const [isBlockEditorOpen, setIsBlockEditorOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<MediaBlock | null>(null);
 
   const supabase = createClient();
 
-  // Setup drag-and-drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  // Move block up in the list
+  const moveBlockUp = async (index: number) => {
+    if (index === 0) return;
 
-  // Handle drag end for reordering blocks
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
+    const newBlocks = [...mediaBlocks];
+    [newBlocks[index - 1], newBlocks[index]] = [newBlocks[index], newBlocks[index - 1]];
 
-    if (over && active.id !== over.id) {
-      const oldIndex = mediaBlocks.findIndex((block) => block.id === active.id);
-      const newIndex = mediaBlocks.findIndex((block) => block.id === over.id);
+    const reorderedBlocks = newBlocks.map((block, i) => ({ ...block, position: i }));
+    setMediaBlocks(reorderedBlocks);
 
-      const reorderedBlocks = arrayMove(mediaBlocks, oldIndex, newIndex).map(
-        (block, index) => ({ ...block, position: index })
-      );
-
-      // Update state immediately for smooth UX
-      setMediaBlocks(reorderedBlocks);
-
-      // Update positions in database
-      try {
-        for (const block of reorderedBlocks) {
-          await supabase
-            .from('media_blocks')
-            .update({ position: block.position })
-            .eq('id', block.id);
-        }
-      } catch (err) {
-        console.error('Error updating block positions:', err);
+    // Update positions in database
+    try {
+      for (const block of reorderedBlocks) {
+        await supabase
+          .from('media_blocks')
+          .update({ position: block.position })
+          .eq('id', block.id);
       }
+    } catch (err) {
+      console.error('Error updating block positions:', err);
+    }
+  };
+
+  // Move block down in the list
+  const moveBlockDown = async (index: number) => {
+    if (index === mediaBlocks.length - 1) return;
+
+    const newBlocks = [...mediaBlocks];
+    [newBlocks[index], newBlocks[index + 1]] = [newBlocks[index + 1], newBlocks[index]];
+
+    const reorderedBlocks = newBlocks.map((block, i) => ({ ...block, position: i }));
+    setMediaBlocks(reorderedBlocks);
+
+    // Update positions in database
+    try {
+      for (const block of reorderedBlocks) {
+        await supabase
+          .from('media_blocks')
+          .update({ position: block.position })
+          .eq('id', block.id);
+      }
+    } catch (err) {
+      console.error('Error updating block positions:', err);
     }
   };
 
@@ -295,16 +289,6 @@ export default function EditGallery() {
       console.error('Error deleting gallery:', err);
       alert('Failed to delete gallery');
     }
-  };
-
-  // Copy link
-  const handleCopyLink = async () => {
-    if (!dbUser) return;
-
-    const url = `${window.location.origin}/${dbUser.username}`;
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   // Add or update media block
@@ -479,31 +463,23 @@ export default function EditGallery() {
 
           {/* Media Blocks List */}
           {mediaBlocks.length > 0 ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={mediaBlocks.map((block) => block.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-4 mb-4">
-                  {mediaBlocks.map((block, index) => (
-                    <SortableBlock
-                      key={block.id}
-                      block={block}
-                      index={index}
-                      onEdit={() => {
-                        setEditingBlock(block);
-                        setIsBlockEditorOpen(true);
-                      }}
-                      onDelete={() => handleDeleteBlock(block.id)}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+            <div className="space-y-4 mb-4">
+              {mediaBlocks.map((block, index) => (
+                <ReorderableBlock
+                  key={block.id}
+                  block={block}
+                  index={index}
+                  totalBlocks={mediaBlocks.length}
+                  onEdit={() => {
+                    setEditingBlock(block);
+                    setIsBlockEditorOpen(true);
+                  }}
+                  onDelete={() => handleDeleteBlock(block.id)}
+                  onMoveUp={() => moveBlockUp(index)}
+                  onMoveDown={() => moveBlockDown(index)}
+                />
+              ))}
+            </div>
           ) : (
             <div className="text-center py-8 text-foreground/60">
               <p>No media blocks yet. Add your first block to get started!</p>
@@ -533,31 +509,14 @@ export default function EditGallery() {
               </div>
               <button
                 onClick={toggleVisibility}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  gallery.is_hidden
-                    ? 'bg-green-600 text-white hover:bg-green-700'
-                    : 'bg-gray-600 text-white hover:bg-gray-700'
-                }`}
+                className="p-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+                aria-label={gallery.is_hidden ? 'Show gallery' : 'Hide gallery'}
               >
-                {gallery.is_hidden ? 'Show' : 'Hide'}
-              </button>
-            </div>
-
-            <hr className="border-gray-200" />
-
-            {/* Copy Link */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-foreground">Share Link</h3>
-                <p className="text-sm text-foreground/60">
-                  Copy your public gallery link
-                </p>
-              </div>
-              <button
-                onClick={handleCopyLink}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                {copied ? 'Copied!' : 'Copy Link'}
+                {gallery.is_hidden ? (
+                  <EyeOff className="w-6 h-6" />
+                ) : (
+                  <Eye className="w-6 h-6" />
+                )}
               </button>
             </div>
 

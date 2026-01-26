@@ -13,7 +13,7 @@ export function VideoBlock({ url }: VideoBlockProps) {
 
   if (hasError) {
     return (
-      <div className="bg-gray-100 border border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center text-gray-500 min-h-[200px]">
+      <div className="bg-gray-100 border border-gray-300 p-8 flex flex-col items-center justify-center text-gray-500 min-h-[200px]">
         <XCircle className="w-12 h-12 mb-2" />
         <p className="text-sm">Video unavailable</p>
       </div>
@@ -21,7 +21,7 @@ export function VideoBlock({ url }: VideoBlockProps) {
   }
 
   return (
-    <div className="relative w-full aspect-video rounded-lg overflow-hidden">
+    <div className="relative w-full aspect-video overflow-hidden">
       <iframe
         src={url}
         width="100%"
