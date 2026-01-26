@@ -452,29 +452,20 @@ export default function EditGallery() {
               placeholder="Gallery title"
             />
 
-            {/* Hide Title Toggle */}
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-              <div>
-                <h4 className="text-sm font-medium text-foreground">Hide Title</h4>
-                <p className="text-xs text-foreground/60">Title won't appear on the live gallery</p>
-              </div>
-              <button
-                onClick={() => {
-                  const newValue = !gallery.hide_title;
+            {/* Hide Title Checkbox */}
+            <label className="flex items-center gap-2 mt-4 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={gallery.hide_title}
+                onChange={(e) => {
+                  const newValue = e.target.checked;
                   setGallery({ ...gallery, hide_title: newValue });
                   saveGallery({ hide_title: newValue });
                 }}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  gallery.hide_title ? 'bg-blue-600' : 'bg-gray-200'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    gallery.hide_title ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-foreground">Hide Title</span>
+            </label>
           </div>
         </div>
 
