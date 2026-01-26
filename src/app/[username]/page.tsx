@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Gallery, User, MediaBlock } from '@/types/gallery';
 import { MediaBlock as MediaBlockComponent } from '@/components/media-blocks/MediaBlock';
@@ -144,12 +144,26 @@ export default function PublicGalleryViewer() {
   };
 
   // Handle button click
-  const handleNextClick = async () => {
+  const handleNextClick = useCallback(async () => {
     if (!user || loadingNext) return;
     setLoadingNext(true);
     await loadRandomGallery(user.id);
     setLoadingNext(false);
-  };
+  }, [user, loadingNext]);
+
+  // Right arrow key navigation (desktop)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        const tag = (document.activeElement?.tagName || '').toLowerCase();
+        if (tag !== 'input' && tag !== 'textarea') {
+          handleNextClick();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleNextClick]);
 
   if (loading) {
     return (
@@ -202,12 +216,26 @@ export default function PublicGalleryViewer() {
   return (
     <div className="min-h-screen bg-[#F9F8F6]">
       <div className="max-w-2xl mx-auto px-4 py-8">
-        {/* Gallery Title */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-foreground leading-tight">
-            {currentGallery.title}
-          </h1>
-          <p className="text-sm text-foreground/50 mt-2">@{username}</p>
+        {/* Header with title and Next button */}
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            {!currentGallery.hide_title && (
+              <h1 className="text-2xl font-semibold text-foreground leading-tight">
+                {currentGallery.title}
+              </h1>
+            )}
+            <p className={`text-sm text-foreground/50 ${currentGallery.hide_title ? '' : 'mt-2'}`}>
+              @{username}
+            </p>
+          </div>
+          {/* Next button - desktop only */}
+          <button
+            onClick={handleNextClick}
+            disabled={loadingNext}
+            className="hidden md:block text-sm font-medium text-foreground/50 hover:text-foreground/70 transition-colors disabled:opacity-50"
+          >
+            {loadingNext ? '...' : 'Next'}
+          </button>
         </div>
 
         {/* Media Blocks */}
@@ -217,17 +245,6 @@ export default function PublicGalleryViewer() {
               <MediaBlockComponent block={block} />
             </div>
           ))}
-        </div>
-
-        {/* Next Gallery Button - hidden on mobile */}
-        <div className="mt-12 hidden md:flex flex-col items-center gap-4">
-          <button
-            onClick={handleNextClick}
-            disabled={loadingNext}
-            className="bg-foreground text-background px-8 py-3 rounded-lg font-medium hover:bg-foreground/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loadingNext ? 'Loading...' : 'View Next Gallery'}
-          </button>
         </div>
 
         {/* Footer Branding */}

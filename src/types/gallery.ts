@@ -16,6 +16,7 @@ export interface Gallery {
   title: string;
   position: number;
   is_hidden: boolean;
+  hide_title: boolean;
   created_at: string;
   updated_at: string;
 }
