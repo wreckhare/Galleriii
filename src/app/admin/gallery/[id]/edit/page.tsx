@@ -6,97 +6,10 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Gallery, User, MediaBlock } from '@/types/gallery';
 import Link from 'next/link';
-import { MediaBlock as MediaBlockComponent } from '@/components/media-blocks/MediaBlock';
 import { BlockEditor } from '@/components/media-blocks/BlockEditor';
-import { ChevronUp, ChevronDown, Eye, EyeOff } from 'lucide-react';
-
-// Simple debounce function
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null;
-  return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
-
-// Block component with up/down reorder arrows
-function ReorderableBlock({
-  block,
-  index,
-  totalBlocks,
-  onEdit,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
-}: {
-  block: MediaBlock;
-  index: number;
-  totalBlocks: number;
-  onEdit: () => void;
-  onDelete: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-}) {
-  const isFirst = index === 0;
-  const isLast = index === totalBlocks - 1;
-
-  return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
-      <div className="bg-gray-50 px-4 py-2 flex items-center justify-between border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="flex flex-row gap-1">
-            <button
-              onClick={onMoveUp}
-              disabled={isFirst}
-              className={`p-1 ${
-                isFirst
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-              aria-label="Move up"
-            >
-              <ChevronUp className="w-5 h-5" strokeWidth={2.5} />
-            </button>
-            <button
-              onClick={onMoveDown}
-              disabled={isLast}
-              className={`p-1 ${
-                isLast
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-              aria-label="Move down"
-            >
-              <ChevronDown className="w-5 h-5" strokeWidth={2.5} />
-            </button>
-          </div>
-          <span className="font-mono text-sm text-foreground/60">{index + 1}</span>
-          <span className="font-medium text-foreground capitalize">{block.type}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-            onClick={onEdit}
-          >
-            Edit
-          </button>
-          <button
-            className="text-red-600 hover:text-red-700 text-sm font-medium"
-            onClick={onDelete}
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-      <div className="p-4">
-        <MediaBlockComponent block={block} />
-      </div>
-    </div>
-  );
-}
+import { ReorderableBlock } from '@/components/media-blocks/ReorderableBlock';
+import { Eye, EyeOff } from 'lucide-react';
+import { debounce } from '@/lib/utils/debounce';
 
 export default function EditGallery() {
   const { user, loading: authLoading } = useAuth();

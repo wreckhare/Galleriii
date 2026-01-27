@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Type, Image, Film, Music, Video, Link as LinkIcon } from 'lucide-react';
 import { MediaBlock } from '@/types/gallery';
+import { validateUrl, convertSpotifyUrl, convertYouTubeUrl } from '@/lib/utils/mediaEmbed';
 
 type BlockType = 'text' | 'image' | 'gif' | 'music' | 'video' | 'link';
 
@@ -99,41 +100,6 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
     onClose();
   };
 
-  const validateUrl = (urlString: string): boolean => {
-    try {
-      new URL(urlString);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const convertSpotifyUrl = (url: string): string => {
-    // Convert: open.spotify.com/track/ID → open.spotify.com/embed/track/ID
-    return url.replace('open.spotify.com/', 'open.spotify.com/embed/');
-  };
-
-  const convertYouTubeUrl = (url: string): string => {
-    try {
-      const urlObj = new URL(url);
-      // Handle youtube.com/watch?v=ID
-      if (urlObj.hostname.includes('youtube.com')) {
-        const videoId = urlObj.searchParams.get('v');
-        if (videoId) {
-          return `https://www.youtube.com/embed/${videoId}`;
-        }
-      }
-      // Handle youtu.be/ID
-      if (urlObj.hostname === 'youtu.be') {
-        const videoId = urlObj.pathname.slice(1);
-        return `https://www.youtube.com/embed/${videoId}`;
-      }
-      return url;
-    } catch {
-      return url;
-    }
-  };
-
   const fetchOpenGraphData = async (url: string) => {
     try {
       const response = await fetch(`/api/og?url=${encodeURIComponent(url)}`);
@@ -221,12 +187,17 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
           return;
         }
 
-        const embedUrl = convertYouTubeUrl(url);
+        const youtubeResult = convertYouTubeUrl(url);
+        if (!youtubeResult) {
+          setUrlError('Could not parse YouTube URL');
+          setIsLoading(false);
+          return;
+        }
 
         onSave({
           type: 'video',
           content: {
-            url: embedUrl,
+            url: youtubeResult.embedUrl,
             platform: 'youtube',
           },
         });

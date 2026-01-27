@@ -65,6 +65,9 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
+// Alias for backward compatibility
+export const validateUrl = isValidUrl;
+
 /**
  * Extracts domain from URL for display
  */
