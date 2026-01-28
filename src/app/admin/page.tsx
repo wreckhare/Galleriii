@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { User, Gallery } from '@/types/gallery';
 import Link from 'next/link';
-import { Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { Eye, EyeOff, Copy, Check, Settings, Plus, Pencil } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { user, loading } = useAuth();
@@ -17,6 +17,7 @@ export default function AdminDashboard() {
   const [loadingGalleries, setLoadingGalleries] = useState(true);
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [togglingVisibility, setTogglingVisibility] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -128,6 +129,33 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleToggleVisibility = async (galleryId: string, currentIsHidden: boolean) => {
+    if (togglingVisibility) return;
+
+    setTogglingVisibility(galleryId);
+    try {
+      const newIsHidden = !currentIsHidden;
+
+      const { error } = await supabase
+        .from('galleries')
+        .update({ is_hidden: newIsHidden })
+        .eq('id', galleryId);
+
+      if (error) {
+        console.error('Error toggling visibility:', error);
+        return;
+      }
+
+      setGalleries(galleries.map(g =>
+        g.id === galleryId ? { ...g, is_hidden: newIsHidden } : g
+      ));
+    } catch (err) {
+      console.error('Error toggling visibility:', err);
+    } finally {
+      setTogglingVisibility(null);
+    }
+  };
+
   if (loading || loadingUser || loadingGalleries) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -144,114 +172,34 @@ export default function AdminDashboard() {
     <div className="min-h-screen py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              Welcome back, {dbUser.display_name || dbUser.username}!
-            </h1>
-            <p className="text-foreground/70 mt-1">
-              Manage your galleries
-            </p>
-          </div>
+        <div className="flex items-start justify-between mb-6">
+          <h1 className="text-3xl font-bold text-foreground">
+            Welcome back,<br />
+            {dbUser.display_name || dbUser.username}!
+          </h1>
           <Link
             href="/admin/settings"
-            className="text-sm text-foreground/70 hover:text-foreground transition-colors"
+            className="p-2 rounded-lg text-foreground/70 hover:text-foreground hover:bg-gray-100 transition-colors"
+            aria-label="Settings"
           >
-            Settings
+            <Settings className="w-6 h-6" />
           </Link>
         </div>
 
-        {/* Gallery List or Empty State */}
-        {galleries.length > 0 ? (
-          <>
-            {/* Create New Button */}
-            <div className="mb-6">
-              <button
-                onClick={handleCreateGallery}
-                disabled={creating}
-                className="bg-foreground text-background px-6 py-3 rounded-lg font-medium hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {creating ? 'Creating...' : '+ Create New Gallery'}
-              </button>
-            </div>
-
-            {/* Galleries Grid */}
-            <div className="grid gap-4">
-              {galleries.map((gallery) => (
-                <div
-                  key={gallery.id}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-foreground mb-1">
-                        {gallery.title}
-                      </h3>
-                      <div className="flex items-center gap-3 text-sm text-foreground/60">
-                        <span className="flex items-center gap-1">
-                          {gallery.is_hidden ? (
-                            <>
-                              <EyeOff className="w-4 h-4 text-gray-400" />
-                              <span className="text-gray-500">Hidden</span>
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="w-4 h-4 text-green-600" />
-                              <span className="text-green-600">Visible</span>
-                            </>
-                          )}
-                        </span>
-                        <span>•</span>
-                        <span>
-                          Updated {new Date(gallery.updated_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                    <Link
-                      href={`/admin/gallery/${gallery.id}/edit`}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm"
-                    >
-                      Edit
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-            <div className="max-w-md mx-auto">
-              <h2 className="text-2xl font-semibold text-foreground mb-3">
-                Create your first gallery!
-              </h2>
-              <p className="text-foreground/70 mb-6">
-                Galleries let you curate 1-3 media blocks to express yourself and showcase your aesthetic.
-              </p>
-              <button
-                onClick={handleCreateGallery}
-                disabled={creating}
-                className="bg-foreground text-background px-6 py-3 rounded-lg font-medium hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {creating ? 'Creating...' : 'Create New Gallery'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Public URL */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-sm text-blue-900">
-              <strong>Your public gallery:</strong>{' '}
+        {/* Public Gallery Link Section */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Your public gallery:</p>
               <a
                 href={`/${dbUser.username}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline hover:text-blue-700"
+                className="text-sm text-foreground/60 hover:underline"
               >
-                {typeof window !== 'undefined' ? window.location.origin : ''}/{dbUser.username}
+                {typeof window !== 'undefined' ? window.location.host : 'galleriii.com'}/{dbUser.username}
               </a>
-            </p>
+            </div>
             <button
               onClick={() => {
                 const url = `${window.location.origin}/${dbUser.username}`;
@@ -259,21 +207,98 @@ export default function AdminDashboard() {
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 rounded-md transition-colors"
+              className="p-2 text-foreground/50 hover:text-foreground transition-colors"
+              aria-label="Copy URL"
             >
               {copied ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  Copied!
-                </>
+                <Check className="w-5 h-5 text-green-600" />
               ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  Copy
-                </>
+                <Copy className="w-5 h-5" />
               )}
             </button>
           </div>
+        </div>
+
+        {/* Create New Collection Button */}
+        <button
+          onClick={handleCreateGallery}
+          disabled={creating}
+          className="w-full bg-foreground text-background px-6 py-3 rounded-lg font-medium hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-6"
+        >
+          <Plus className="w-5 h-5" />
+          <span>{creating ? 'Creating...' : 'Create New Collection'}</span>
+        </button>
+
+        {/* Horizontal Divider */}
+        <hr className="border-gray-200 mb-6" />
+
+        {/* Collection List or Empty State */}
+        {galleries.length > 0 ? (
+          <div className="space-y-3">
+            {galleries.map((gallery) => (
+              <div
+                key={gallery.id}
+                className="bg-white rounded-lg border border-gray-200 px-4 py-3"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-medium text-foreground truncate">
+                      {gallery.title}
+                    </h3>
+                    <p className="text-sm text-foreground/60">
+                      Updated {new Date(gallery.updated_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    {/* Visibility Toggle */}
+                    <button
+                      onClick={() => handleToggleVisibility(gallery.id, gallery.is_hidden)}
+                      disabled={togglingVisibility === gallery.id}
+                      className="p-2 rounded-lg text-foreground/60 hover:text-foreground hover:bg-gray-100 transition-colors disabled:opacity-50"
+                      aria-label={gallery.is_hidden ? 'Make visible' : 'Hide collection'}
+                    >
+                      {gallery.is_hidden ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
+                    </button>
+                    {/* Edit Button */}
+                    <Link
+                      href={`/admin/gallery/${gallery.id}/edit`}
+                      className="p-2 rounded-lg text-foreground/60 hover:text-foreground hover:bg-gray-100 transition-colors"
+                      aria-label="Edit collection"
+                    >
+                      <Pencil className="w-5 h-5" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+            <div className="max-w-md mx-auto">
+              <h2 className="text-2xl font-semibold text-foreground mb-3">
+                Create your first collection!
+              </h2>
+              <p className="text-foreground/70 mb-6">
+                Collections let you curate 1-3 media blocks to express yourself and showcase your aesthetic.
+              </p>
+              <button
+                onClick={handleCreateGallery}
+                disabled={creating}
+                className="bg-foreground text-background px-6 py-3 rounded-lg font-medium hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {creating ? 'Creating...' : 'Create New Collection'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="mt-12 text-center">
+          <p className="text-sm text-foreground/40">galeriii</p>
         </div>
       </div>
     </div>
