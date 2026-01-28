@@ -121,7 +121,7 @@ export default function AdminDashboard() {
       }
 
       // Redirect to edit page
-      router.push(`/admin/gallery/${newGallery.id}/edit`);
+      router.push(`/admin/display/${newGallery.id}/edit`);
     } catch (err) {
       console.error('Error creating gallery:', err);
       alert('An unexpected error occurred');
@@ -265,7 +265,7 @@ export default function AdminDashboard() {
                     </button>
                     {/* Edit Button */}
                     <Link
-                      href={`/admin/gallery/${gallery.id}/edit`}
+                      href={`/admin/display/${gallery.id}/edit`}
                       className="p-2 rounded-lg text-foreground/60 hover:text-foreground hover:bg-gray-100 transition-colors"
                       aria-label="Edit collection"
                     >
@@ -298,7 +298,7 @@ export default function AdminDashboard() {
 
         {/* Footer */}
         <div className="mt-12 text-center">
-          <p className="text-sm text-foreground/40">Galleriii</p>
+          <p className="text-sm text-foreground/40">galleriii</p>
         </div>
       </div>
     </div>

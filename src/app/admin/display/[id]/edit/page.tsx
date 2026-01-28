@@ -11,7 +11,7 @@ import { ReorderableBlock } from '@/components/media-blocks/ReorderableBlock';
 import { Eye, EyeOff } from 'lucide-react';
 import { debounce } from '@/lib/utils/debounce';
 
-export default function EditGallery() {
+export default function EditDisplay() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
@@ -315,8 +315,8 @@ export default function EditGallery() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-foreground mb-2">Gallery Not Found</h2>
-          <p className="text-foreground/70 mb-4">{error || 'This gallery does not exist or you do not have permission to view it.'}</p>
+          <h2 className="text-2xl font-bold text-foreground mb-2">Display Not Found</h2>
+          <p className="text-foreground/70 mb-4">{error || 'This display does not exist or you do not have permission to view it.'}</p>
           <Link href="/admin" className="text-blue-600 hover:underline">
             Back to Dashboard
           </Link>
@@ -331,7 +331,7 @@ export default function EditGallery() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Edit Gallery</h1>
+            <h1 className="text-3xl font-bold text-foreground">Edit Display</h1>
             <p className="text-foreground/70 mt-1">
               {saving ? 'Saving...' : lastSaved ? `Last saved at ${lastSaved.toLocaleTimeString()}` : 'All changes auto-save'}
             </p>
@@ -349,7 +349,7 @@ export default function EditGallery() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <label htmlFor="title" className="block text-sm font-medium text-foreground">
-                Gallery Title
+                Display Title
               </label>
               <span className={`text-sm ${gallery.title.length >= 40 ? 'text-red-500' : 'text-foreground/60'}`}>
                 {gallery.title.length}/40
@@ -362,7 +362,7 @@ export default function EditGallery() {
               onChange={(e) => handleTitleChange(e.target.value)}
               maxLength={40}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Gallery title"
+              placeholder="Untitled Display"
             />
 
             {/* Hide Title Checkbox */}
@@ -410,7 +410,7 @@ export default function EditGallery() {
             </div>
           ) : (
             <div className="text-center py-8 text-foreground/60">
-              <p>No media blocks yet. Add your first block to get started!</p>
+              <p>Add your first block to get started!</p>
             </div>
           )}
 
@@ -430,9 +430,9 @@ export default function EditGallery() {
             {/* Visibility Toggle */}
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-medium text-foreground">Gallery Visibility</h3>
+                <h3 className="font-medium text-foreground">Display Visibility</h3>
                 <p className="text-sm text-foreground/60">
-                  {gallery.is_hidden ? 'This gallery is hidden from your public page' : 'This gallery is visible on your public page'}
+                  {gallery.is_hidden ? 'This display is hidden from your public page' : 'This display is visible on your public page'}
                 </p>
               </div>
               <button
@@ -453,9 +453,9 @@ export default function EditGallery() {
             {/* Delete Gallery */}
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-medium text-red-600">Delete Gallery</h3>
+                <h3 className="font-medium text-red-600">Delete Display</h3>
                 <p className="text-sm text-foreground/60">
-                  Permanently delete this gallery and all its blocks
+                  Permanently delete this display and all its blocks
                 </p>
               </div>
               <button
