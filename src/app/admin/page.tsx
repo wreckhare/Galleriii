@@ -106,7 +106,7 @@ export default function AdminDashboard() {
         .from('galleries')
         .insert({
           user_id: user.id,
-          title: 'Untitled Gallery',
+          title: '',
           position: nextPosition,
           is_hidden: false,
         })
