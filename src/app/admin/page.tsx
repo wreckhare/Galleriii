@@ -229,7 +229,7 @@ export default function AdminDashboard() {
           className="w-full bg-foreground text-background px-6 py-3 rounded-lg font-medium hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-6"
         >
           <Plus className="w-5 h-5" />
-          <span>{creating ? 'Creating...' : 'Create New Collection'}</span>
+          <span>{creating ? 'Creating...' : 'Create New Display'}</span>
         </button>
 
         {/* Collection List or Empty State */}
@@ -298,7 +298,7 @@ export default function AdminDashboard() {
 
         {/* Footer */}
         <div className="mt-12 text-center">
-          <p className="text-sm text-foreground/40">galeriii</p>
+          <p className="text-sm text-foreground/40">Galleriii</p>
         </div>
       </div>
     </div>

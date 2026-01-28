@@ -76,15 +76,29 @@ export default function PublicGalleryViewer() {
   // Load the next gallery in the shuffled sequence
   const loadRandomGallery = async (userId: string) => {
     try {
-      // Fetch all non-hidden galleries
-      const { data: galleries, error: galleriesError } = await supabase
+      // Fetch all non-hidden galleries with their media blocks
+      const { data: galleriesWithBlocks, error: galleriesError } = await supabase
         .from('galleries')
-        .select('*')
+        .select(`
+          *,
+          media_blocks(id)
+        `)
         .eq('user_id', userId)
         .eq('is_hidden', false)
         .order('position', { ascending: true });
 
-      if (galleriesError || !galleries || galleries.length === 0) {
+      if (galleriesError || !galleriesWithBlocks) {
+        setError('No galleries available');
+        setLoading(false);
+        return;
+      }
+
+      // Filter out galleries that have no media blocks
+      const galleries = galleriesWithBlocks.filter(
+        g => g.media_blocks && g.media_blocks.length > 0
+      );
+
+      if (galleries.length === 0) {
         setError('No galleries available');
         setLoading(false);
         return;
