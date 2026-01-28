@@ -219,6 +219,9 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Horizontal Divider */}
+        <hr className="border-gray-200 mb-4" />
+
         {/* Create New Collection Button */}
         <button
           onClick={handleCreateGallery}
@@ -228,9 +231,6 @@ export default function AdminDashboard() {
           <Plus className="w-5 h-5" />
           <span>{creating ? 'Creating...' : 'Create New Collection'}</span>
         </button>
-
-        {/* Horizontal Divider */}
-        <hr className="border-gray-200 mb-6" />
 
         {/* Collection List or Empty State */}
         {galleries.length > 0 ? (
