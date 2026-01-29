@@ -235,10 +235,12 @@ export default function PublicGalleryViewer() {
         {/* Header with title and Next button */}
         <div className="flex items-end justify-between mb-8">
           <div>
-            <h1 className={`text-2xl font-semibold text-foreground leading-tight ${currentGallery.hide_title ? 'invisible' : ''}`}>
-              {currentGallery.title || '\u00A0'}
-            </h1>
-            <p className="text-sm text-foreground/50 mt-2">
+            {!currentGallery.hide_title && currentGallery.title && (
+              <h1 className="text-2xl font-semibold text-foreground leading-tight">
+                {currentGallery.title}
+              </h1>
+            )}
+            <p className={`text-sm text-foreground/50 ${!currentGallery.hide_title && currentGallery.title ? 'mt-2' : ''}`}>
               @{username}
             </p>
           </div>
@@ -278,9 +280,12 @@ export default function PublicGalleryViewer() {
 
         {/* Footer Branding */}
         <div className="mt-8 pb-4 flex flex-col items-center">
-          <p className="text-sm font-medium text-foreground/20 tracking-wide">
+          <a
+            href="/"
+            className="text-sm font-medium text-foreground/20 tracking-wide hover:text-foreground/40 transition-colors"
+          >
             galleriii
-          </p>
+          </a>
         </div>
       </div>
     </div>
