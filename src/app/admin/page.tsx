@@ -179,10 +179,10 @@ export default function AdminDashboard() {
           </h1>
           <Link
             href="/admin/settings"
-            className="p-2 rounded-lg text-foreground/70 hover:text-foreground hover:bg-gray-100 transition-colors"
+            className="p-2.5 rounded-lg text-foreground/70 hover:text-foreground hover:bg-gray-100 transition-colors -mr-0.5"
             aria-label="Settings"
           >
-            <Settings className="w-6 h-6" />
+            <Settings className="w-7 h-7" />
           </Link>
         </div>
 
@@ -190,7 +190,7 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-foreground">Your public gallery:</p>
+              <p className="text-sm font-semibold text-foreground">Your Public Gallery:</p>
               <a
                 href={`/${dbUser.username}`}
                 target="_blank"

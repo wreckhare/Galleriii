@@ -227,28 +227,43 @@ export default function PublicGalleryViewer() {
     );
   }
 
+  const shouldCenterVertically = user.center_media_vertical;
+
   return (
-    <div className="min-h-screen bg-[#F9F8F6]">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className={`min-h-screen bg-[#F9F8F6] ${shouldCenterVertically ? 'flex flex-col' : ''}`}>
+      <div className={`max-w-2xl mx-auto px-6 md:px-8 py-8 w-full ${shouldCenterVertically ? 'my-auto' : ''}`}>
         {/* Header with title and Next button */}
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex items-end justify-between mb-8">
           <div>
-            {!currentGallery.hide_title && (
-              <h1 className="text-2xl font-semibold text-foreground leading-tight">
-                {currentGallery.title}
-              </h1>
-            )}
-            <p className={`text-sm text-foreground/50 ${currentGallery.hide_title ? '' : 'mt-2'}`}>
+            <h1 className={`text-2xl font-semibold text-foreground leading-tight ${currentGallery.hide_title ? 'invisible' : ''}`}>
+              {currentGallery.title || '\u00A0'}
+            </h1>
+            <p className="text-sm text-foreground/50 mt-2">
               @{username}
             </p>
           </div>
-          {/* Next button - desktop only */}
+          {/* Next button - desktop only, styled like a keyboard key */}
           <button
             onClick={handleNextClick}
             disabled={loadingNext}
-            className="hidden md:block text-sm font-medium text-foreground/50 hover:text-foreground/70 transition-colors disabled:opacity-50"
+            className="hidden md:flex items-center justify-center w-10 h-10 rounded-lg border-2 border-foreground/20 bg-gradient-to-b from-white to-gray-100 shadow-[0_2px_0_0_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] hover:from-gray-50 hover:to-gray-150 hover:border-foreground/30 active:shadow-[0_0px_0_0_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] active:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Next gallery (→)"
           >
-            {loadingNext ? '...' : 'Next'}
+            {loadingNext ? (
+              <span className="text-foreground/50 text-sm">...</span>
+            ) : (
+              <svg
+                className="w-5 h-5 text-foreground/60"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            )}
           </button>
         </div>
 

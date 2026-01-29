@@ -6,6 +6,7 @@ export interface User {
   id: string;
   username: string;
   display_name?: string;
+  center_media_vertical?: boolean;
   created_at: string;
   updated_at: string;
 }

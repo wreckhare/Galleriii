@@ -2,13 +2,13 @@
 
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Gallery, User, MediaBlock } from '@/types/gallery';
 import Link from 'next/link';
 import { BlockEditor } from '@/components/media-blocks/BlockEditor';
 import { ReorderableBlock } from '@/components/media-blocks/ReorderableBlock';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Undo2 } from 'lucide-react';
 import { debounce } from '@/lib/utils/debounce';
 
 export default function EditDisplay() {
@@ -26,29 +26,90 @@ export default function EditDisplay() {
   const [error, setError] = useState('');
   const [isBlockEditorOpen, setIsBlockEditorOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<MediaBlock | null>(null);
+  const [saveIndicatorText, setSaveIndicatorText] = useState('Changes Save Automatically');
+  const [saveChangesButtonText, setSaveChangesButtonText] = useState('Save Changes');
+  const saveIndicatorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const supabase = createClient();
+
+  // Trigger save indicator animation
+  const triggerSaveIndicator = useCallback(() => {
+    if (saveIndicatorTimeoutRef.current) {
+      clearTimeout(saveIndicatorTimeoutRef.current);
+    }
+    setSaveIndicatorText('Saving Changes...');
+    saveIndicatorTimeoutRef.current = setTimeout(() => {
+      setSaveIndicatorText('Changes Saved');
+    }, 1500);
+  }, []);
 
   // Move block up in the list
   const moveBlockUp = async (index: number) => {
     if (index === 0) return;
 
+    const blockToMove = mediaBlocks[index];
+    const blockAbove = mediaBlocks[index - 1];
+
+    // Swap in local state
     const newBlocks = [...mediaBlocks];
     [newBlocks[index - 1], newBlocks[index]] = [newBlocks[index], newBlocks[index - 1]];
-
     const reorderedBlocks = newBlocks.map((block, i) => ({ ...block, position: i }));
     setMediaBlocks(reorderedBlocks);
+    triggerSaveIndicator();
 
-    // Update positions in database
+    // Delete both blocks and re-insert with swapped positions
     try {
-      for (const block of reorderedBlocks) {
-        await supabase
-          .from('media_blocks')
-          .update({ position: block.position })
-          .eq('id', block.id);
+      // Delete the two blocks being swapped
+      const { error: deleteError1 } = await supabase
+        .from('media_blocks')
+        .delete()
+        .eq('id', blockToMove.id);
+
+      if (deleteError1) {
+        console.error('Delete error 1:', deleteError1);
+        return;
+      }
+
+      const { error: deleteError2 } = await supabase
+        .from('media_blocks')
+        .delete()
+        .eq('id', blockAbove.id);
+
+      if (deleteError2) {
+        console.error('Delete error 2:', deleteError2);
+        return;
+      }
+
+      // Re-insert with swapped positions
+      const { error: insertError1 } = await supabase
+        .from('media_blocks')
+        .insert({
+          id: blockToMove.id,
+          gallery_id: blockToMove.gallery_id,
+          type: blockToMove.type,
+          position: index - 1,
+          content: blockToMove.content,
+        });
+
+      if (insertError1) {
+        console.error('Insert error 1:', insertError1);
+      }
+
+      const { error: insertError2 } = await supabase
+        .from('media_blocks')
+        .insert({
+          id: blockAbove.id,
+          gallery_id: blockAbove.gallery_id,
+          type: blockAbove.type,
+          position: index,
+          content: blockAbove.content,
+        });
+
+      if (insertError2) {
+        console.error('Insert error 2:', insertError2);
       }
     } catch (err) {
-      console.error('Error updating block positions:', err);
+      console.error('Error swapping blocks:', err);
     }
   };
 
@@ -56,22 +117,69 @@ export default function EditDisplay() {
   const moveBlockDown = async (index: number) => {
     if (index === mediaBlocks.length - 1) return;
 
+    const blockToMove = mediaBlocks[index];
+    const blockBelow = mediaBlocks[index + 1];
+
+    // Swap in local state
     const newBlocks = [...mediaBlocks];
     [newBlocks[index], newBlocks[index + 1]] = [newBlocks[index + 1], newBlocks[index]];
-
     const reorderedBlocks = newBlocks.map((block, i) => ({ ...block, position: i }));
     setMediaBlocks(reorderedBlocks);
+    triggerSaveIndicator();
 
-    // Update positions in database
+    // Delete both blocks and re-insert with swapped positions
     try {
-      for (const block of reorderedBlocks) {
-        await supabase
-          .from('media_blocks')
-          .update({ position: block.position })
-          .eq('id', block.id);
+      // Delete the two blocks being swapped
+      const { error: deleteError1 } = await supabase
+        .from('media_blocks')
+        .delete()
+        .eq('id', blockToMove.id);
+
+      if (deleteError1) {
+        console.error('Delete error 1:', deleteError1);
+        return;
+      }
+
+      const { error: deleteError2 } = await supabase
+        .from('media_blocks')
+        .delete()
+        .eq('id', blockBelow.id);
+
+      if (deleteError2) {
+        console.error('Delete error 2:', deleteError2);
+        return;
+      }
+
+      // Re-insert with swapped positions
+      const { error: insertError1 } = await supabase
+        .from('media_blocks')
+        .insert({
+          id: blockToMove.id,
+          gallery_id: blockToMove.gallery_id,
+          type: blockToMove.type,
+          position: index + 1,
+          content: blockToMove.content,
+        });
+
+      if (insertError1) {
+        console.error('Insert error 1:', insertError1);
+      }
+
+      const { error: insertError2 } = await supabase
+        .from('media_blocks')
+        .insert({
+          id: blockBelow.id,
+          gallery_id: blockBelow.gallery_id,
+          type: blockBelow.type,
+          position: index,
+          content: blockBelow.content,
+        });
+
+      if (insertError2) {
+        console.error('Insert error 2:', insertError2);
       }
     } catch (err) {
-      console.error('Error updating block positions:', err);
+      console.error('Error swapping blocks:', err);
     }
   };
 
@@ -137,6 +245,7 @@ export default function EditDisplay() {
     if (!gallery) return;
 
     setSaving(true);
+    triggerSaveIndicator();
     try {
       const { error: updateError } = await supabase
         .from('galleries')
@@ -153,7 +262,7 @@ export default function EditDisplay() {
     } finally {
       setSaving(false);
     }
-  }, [gallery, supabase]);
+  }, [gallery, supabase, triggerSaveIndicator]);
 
   // Debounced save
   const debouncedSave = useMemo(
@@ -266,6 +375,14 @@ export default function EditDisplay() {
     }
   };
 
+  // Handle Save Changes button click
+  const handleSaveChanges = () => {
+    setSaveChangesButtonText('Saved!');
+    setTimeout(() => {
+      router.push('/admin');
+    }, 750);
+  };
+
   // Delete media block
   const handleDeleteBlock = async (blockId: string) => {
     const confirmed = confirm('Are you sure you want to delete this block?');
@@ -332,15 +449,16 @@ export default function EditDisplay() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Edit Display</h1>
-            <p className="text-foreground/70 mt-1">
-              {saving ? 'Saving...' : lastSaved ? `Last saved at ${lastSaved.toLocaleTimeString()}` : 'All changes auto-save'}
+            <p className="text-sm text-foreground/70 mt-1 h-5">
+              {saveIndicatorText}
             </p>
           </div>
           <Link
             href="/admin"
-            className="text-sm text-foreground/70 hover:text-foreground transition-colors"
+            className="px-4 py-2 border border-gray-300 rounded-lg text-foreground/70 hover:text-foreground hover:bg-gray-100 transition-colors"
+            aria-label="Back to Dashboard"
           >
-            Back to Dashboard
+            <Undo2 className="w-6 h-6" />
           </Link>
         </div>
 
@@ -466,6 +584,21 @@ export default function EditDisplay() {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Save Changes Button */}
+        <button
+          onClick={handleSaveChanges}
+          className="w-full py-3 bg-[#000000] rounded-lg font-medium hover:bg-gray-900 transition-colors mt-6 flex items-center justify-center gap-2"
+          style={{ backgroundColor: '#000000', color: '#FFFFFF' }}
+        >
+          {saveChangesButtonText}
+          <Undo2 className="w-5 h-5" />
+        </button>
+
+        {/* Footer */}
+        <div className="mt-12 text-center">
+          <p className="text-sm text-foreground/40">galleriii</p>
         </div>
 
         {/* Block Editor Modal */}

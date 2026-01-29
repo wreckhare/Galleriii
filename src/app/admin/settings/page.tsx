@@ -4,15 +4,15 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { User } from '@/types/gallery';
 import Link from 'next/link';
+import { Undo2 } from 'lucide-react';
 
 export default function Settings() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
-  const [dbUser, setDbUser] = useState<User | null>(null);
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [centerMediaVertical, setCenterMediaVertical] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [isNewUser, setIsNewUser] = useState(false);
@@ -33,10 +33,11 @@ export default function Settings() {
           // New user - set up initial form
           setIsNewUser(true);
           setDisplayName(user.user_metadata?.full_name || '');
+          setCenterMediaVertical(false);
         } else {
-          setDbUser(data as User);
           setUsername(data.username);
           setDisplayName(data.display_name || '');
+          setCenterMediaVertical(data.center_media_vertical || false);
           setIsNewUser(false);
         }
       } catch (err) {
@@ -88,6 +89,7 @@ export default function Settings() {
             id: user!.id,
             username: username.toLowerCase(),
             display_name: displayName || null,
+            center_media_vertical: centerMediaVertical,
           });
 
         if (insertError) {
@@ -110,6 +112,7 @@ export default function Settings() {
           .update({
             username: username.toLowerCase(),
             display_name: displayName || null,
+            center_media_vertical: centerMediaVertical,
           })
           .eq('id', user!.id);
 
@@ -123,16 +126,6 @@ export default function Settings() {
           return;
         }
 
-        // Success - reload user data
-        const { data } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user!.id)
-          .single();
-
-        if (data) {
-          setDbUser(data as User);
-        }
       }
     } catch (err) {
       console.error('Error saving user:', err);
@@ -159,15 +152,26 @@ export default function Settings() {
     <div className="min-h-screen py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">
-            {isNewUser ? 'Welcome to Galleriii!' : 'Settings'}
-          </h1>
-          <p className="text-foreground/70 mt-1">
-            {isNewUser
-              ? 'Choose your username to get started'
-              : 'Manage your account settings'}
-          </p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              {isNewUser ? 'Welcome to Galleriii!' : 'Settings'}
+            </h1>
+            <p className="text-foreground/70 mt-1">
+              {isNewUser
+                ? 'Choose your username to get started'
+                : 'Manage your account settings'}
+            </p>
+          </div>
+          {!isNewUser && (
+            <Link
+              href="/admin"
+              className="px-4 py-2 border border-gray-300 rounded-lg text-foreground/70 hover:text-foreground hover:bg-gray-100 transition-colors"
+              aria-label="Back to Dashboard"
+            >
+              <Undo2 className="w-6 h-6" />
+            </Link>
+          )}
         </div>
 
         {/* Form */}
@@ -209,17 +213,31 @@ export default function Settings() {
               />
             </div>
 
+            {/* Center Media on Public Gallery */}
+            {!isNewUser && (
+              <div>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={centerMediaVertical}
+                    onChange={(e) => setCenterMediaVertical(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    disabled={saving}
+                  />
+                  <span className="text-sm font-medium text-foreground">
+                    Center Media on Public Gallery
+                  </span>
+                </label>
+                <p className="text-sm text-foreground/60 mt-1 ml-7">
+                  Vertically centers media blocks on the viewing screen
+                </p>
+              </div>
+            )}
+
             {/* Error Message */}
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-700">{error}</p>
-              </div>
-            )}
-
-            {/* Success Message (for existing users) */}
-            {!isNewUser && !error && dbUser && username === dbUser.username && displayName === (dbUser.display_name || '') && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-700">Settings saved!</p>
               </div>
             )}
 
@@ -232,21 +250,12 @@ export default function Settings() {
               >
                 {saving ? 'Saving...' : isNewUser ? 'Continue' : 'Save Changes'}
               </button>
-
-              {!isNewUser && (
-                <Link
-                  href="/admin"
-                  className="text-foreground/70 hover:text-foreground transition-colors"
-                >
-                  Back to Dashboard
-                </Link>
-              )}
             </div>
           </div>
         </form>
 
         {/* Sign Out */}
-        <div className="mt-6">
+        <div className="mt-6 flex justify-end">
           <button
             onClick={signOut}
             className="text-sm text-red-600 hover:text-red-700 transition-colors"
