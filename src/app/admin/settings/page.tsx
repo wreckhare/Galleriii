@@ -14,6 +14,7 @@ export default function Settings() {
   const [displayName, setDisplayName] = useState('');
   const [centerMediaVertical, setCenterMediaVertical] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState('');
   const [isNewUser, setIsNewUser] = useState(false);
   const supabase = createClient();
@@ -126,11 +127,15 @@ export default function Settings() {
           return;
         }
 
+        // Show "Saving..." for 0.5 seconds, then show "Changes Saved"
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setSaving(false);
+        setSaveSuccess(true);
+        return;
       }
     } catch (err) {
       console.error('Error saving user:', err);
       setError('An unexpected error occurred');
-    } finally {
       setSaving(false);
     }
   };
@@ -186,7 +191,7 @@ export default function Settings() {
                 type="text"
                 id="username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => { setUsername(e.target.value); setSaveSuccess(false); }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="your-username"
                 required
@@ -206,7 +211,7 @@ export default function Settings() {
                 type="text"
                 id="displayName"
                 value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+                onChange={(e) => { setDisplayName(e.target.value); setSaveSuccess(false); }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Your Name"
                 disabled={saving}
@@ -220,7 +225,7 @@ export default function Settings() {
                   <input
                     type="checkbox"
                     checked={centerMediaVertical}
-                    onChange={(e) => setCenterMediaVertical(e.target.checked)}
+                    onChange={(e) => { setCenterMediaVertical(e.target.checked); setSaveSuccess(false); }}
                     className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     disabled={saving}
                   />
@@ -248,7 +253,7 @@ export default function Settings() {
                 disabled={saving || !username}
                 className="bg-foreground text-background px-6 py-2 rounded-lg font-medium hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saving ? 'Saving...' : isNewUser ? 'Continue' : 'Save Changes'}
+                {saving ? 'Saving...' : isNewUser ? 'Continue' : saveSuccess ? 'Changes Saved' : 'Save Changes'}
               </button>
             </div>
           </div>
