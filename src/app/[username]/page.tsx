@@ -231,9 +231,9 @@ export default function PublicGalleryViewer() {
 
   return (
     <div className={`min-h-screen bg-[#F9F8F6] ${shouldCenterVertically ? 'flex flex-col' : ''}`}>
-      <div className={`max-w-2xl mx-auto px-6 md:px-8 py-8 w-full ${shouldCenterVertically ? 'my-auto' : ''}`}>
+      <div className={`max-w-2xl mx-auto px-6 md:px-8 w-full ${shouldCenterVertically ? 'flex flex-col flex-1' : 'py-8'}`}>
         {/* Header with title and Next button */}
-        <div className="flex items-end justify-between mb-8">
+        <div className={`flex items-center justify-between mb-8 ${shouldCenterVertically ? 'pt-8' : ''}`}>
           <div>
             {!currentGallery.hide_title && currentGallery.title && (
               <h1 className="text-2xl font-semibold text-foreground leading-tight">
@@ -269,17 +269,19 @@ export default function PublicGalleryViewer() {
           </button>
         </div>
 
-        {/* Media Blocks */}
-        <div className="space-y-6">
-          {mediaBlocks.map((block) => (
-            <div key={block.id} className="w-full">
-              <MediaBlockComponent block={block} />
-            </div>
-          ))}
+        {/* Media Blocks - centered vertically when setting enabled */}
+        <div className={shouldCenterVertically ? 'flex-1 flex flex-col justify-center' : ''}>
+          <div className="space-y-6">
+            {mediaBlocks.map((block) => (
+              <div key={block.id} className="w-full">
+                <MediaBlockComponent block={block} />
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Footer Branding */}
-        <div className="mt-8 pb-4 flex flex-col items-center">
+        <div className={`flex flex-col items-center ${shouldCenterVertically ? 'pb-8' : 'mt-8 pb-4'}`}>
           <a
             href="/"
             className="text-sm font-medium text-foreground/20 tracking-wide hover:text-foreground/40 transition-colors"
