@@ -77,6 +77,7 @@ export interface LinkBlockContent {
   title?: string;
   description?: string;
   image?: string;
+  noPreview?: boolean;
 }
 
 // Gallery with populated media blocks

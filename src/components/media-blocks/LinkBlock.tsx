@@ -8,18 +8,46 @@ interface LinkBlockProps {
   title?: string;
   description?: string;
   image?: string;
+  noPreview?: boolean;
 }
 
-export function LinkBlock({ url, title, description, image }: LinkBlockProps) {
+function formatDisplayUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    // Return domain + pathname + search, without protocol
+    const path = parsed.pathname + parsed.search;
+    return parsed.host + (path === '/' ? '' : path);
+  } catch {
+    return url;
+  }
+}
+
+export function LinkBlock({ url, title, description, image, noPreview }: LinkBlockProps) {
+  // Minimal display: grey underlined text only
+  if (noPreview) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block p-4 text-foreground/60 underline hover:text-foreground/80 transition-colors truncate"
+      >
+        {formatDisplayUrl(url)}
+      </a>
+    );
+  }
+
+  // Full preview card - horizontal layout (image left, text right)
   return (
     <a
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block bg-white border border-gray-200 overflow-hidden hover:border-gray-300 hover:shadow-md transition-all duration-200"
+      className="flex bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 hover:shadow-md transition-all duration-200"
     >
+      {/* Image - left side */}
       {image && (
-        <div className="w-full h-48 bg-gray-100 overflow-hidden">
+        <div className="w-44 h-28 flex-shrink-0 bg-gray-100">
           <img
             src={image}
             alt={title || 'Link preview'}
@@ -27,23 +55,20 @@ export function LinkBlock({ url, title, description, image }: LinkBlockProps) {
           />
         </div>
       )}
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            {title && (
-              <h3 className="font-semibold text-foreground mb-1 truncate">
-                {title}
-              </h3>
-            )}
-            {description && (
-              <p className="text-sm text-foreground/70 line-clamp-2 mb-2">
-                {description}
-              </p>
-            )}
-            <p className="text-xs text-foreground/50 truncate">{url}</p>
-          </div>
-          <ExternalLink className="w-4 h-4 text-foreground/50 flex-shrink-0 mt-1" />
-        </div>
+
+      {/* Text content - right side */}
+      <div className="flex-1 p-4 min-w-0 flex flex-col justify-center">
+        {title && (
+          <h3 className="font-semibold text-foreground mb-1 line-clamp-2">
+            {title}
+          </h3>
+        )}
+        {description && (
+          <p className="text-sm text-foreground/70 line-clamp-2 mb-2">
+            {description}
+          </p>
+        )}
+        <p className="text-xs text-foreground/50 truncate">{formatDisplayUrl(url)}</p>
       </div>
     </a>
   );

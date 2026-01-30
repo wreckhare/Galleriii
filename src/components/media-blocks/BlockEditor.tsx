@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, Type, Image, Film, Music, Video, Link as LinkIcon } from 'lucide-react';
 import { MediaBlock } from '@/types/gallery';
 import { validateUrl, convertSpotifyUrl, convertYouTubeUrl } from '@/lib/utils/mediaEmbed';
@@ -37,6 +37,8 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
   const [linkTitle, setLinkTitle] = useState('');
   const [linkDescription, setLinkDescription] = useState('');
   const [linkImage, setLinkImage] = useState('');
+  const [noPreview, setNoPreview] = useState(false);
+  const [isFetchingOg, setIsFetchingOg] = useState(false);
 
   const blockTypes = [
     { type: 'text' as BlockType, icon: Type, label: 'Text', description: 'Add formatted text or a quote' },
@@ -75,9 +77,45 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
         setLinkTitle(content.title || '');
         setLinkDescription(content.description || '');
         setLinkImage(content.image || '');
+        setNoPreview(content.noPreview || false);
       }
     }
   }, [editingBlock, isOpen]);
+
+  const fetchOpenGraphData = useCallback(async (targetUrl: string) => {
+    setIsFetchingOg(true);
+    try {
+      const response = await fetch(`/api/og?url=${encodeURIComponent(targetUrl)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setLinkTitle(data.title || '');
+        setLinkDescription(data.description || '');
+        setLinkImage(data.image || '');
+      }
+    } catch (error) {
+      console.error('Failed to fetch OG data:', error);
+    } finally {
+      setIsFetchingOg(false);
+    }
+  }, []);
+
+  // Auto-fetch OG data when URL changes (with debounce)
+  useEffect(() => {
+    if (selectedType !== 'link' || noPreview || !url || !validateUrl(url)) {
+      return;
+    }
+
+    // Don't auto-fetch if we already have data (e.g., when editing)
+    if (linkTitle || linkDescription || linkImage) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      fetchOpenGraphData(url);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [url, selectedType, noPreview, linkTitle, linkDescription, linkImage, fetchOpenGraphData]);
 
   const resetForm = () => {
     setSelectedType(null);
@@ -92,26 +130,14 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
     setLinkTitle('');
     setLinkDescription('');
     setLinkImage('');
+    setNoPreview(false);
+    setIsFetchingOg(false);
     setIsLoading(false);
   };
 
   const handleClose = () => {
     resetForm();
     onClose();
-  };
-
-  const fetchOpenGraphData = async (url: string) => {
-    try {
-      const response = await fetch(`/api/og?url=${encodeURIComponent(url)}`);
-      if (response.ok) {
-        const data = await response.json();
-        setLinkTitle(data.title || '');
-        setLinkDescription(data.description || '');
-        setLinkImage(data.image || '');
-      }
-    } catch (error) {
-      console.error('Failed to fetch OG data:', error);
-    }
   };
 
   const handleSave = async () => {
@@ -220,6 +246,7 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
             title: linkTitle,
             description: linkDescription,
             image: linkImage,
+            noPreview,
           },
         });
       }
@@ -395,14 +422,62 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
                 )}
               </div>
 
-              {selectedType === 'link' && url && validateUrl(url) && (
-                <button
-                  type="button"
-                  onClick={() => fetchOpenGraphData(url)}
-                  className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
-                >
-                  Fetch link preview
-                </button>
+              {selectedType === 'link' && (
+                <>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={noPreview}
+                      onChange={(e) => setNoPreview(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-foreground">Hide preview</span>
+                  </label>
+
+                  {!noPreview && url && validateUrl(url) && (
+                    <button
+                      type="button"
+                      onClick={() => fetchOpenGraphData(url)}
+                      disabled={isFetchingOg}
+                      className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-foreground hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isFetchingOg ? 'Fetching...' : 'Fetch link preview'}
+                    </button>
+                  )}
+
+                  {/* Link Preview - horizontal layout */}
+                  {!noPreview && (linkTitle || linkDescription || linkImage) && (
+                    <div className="border-t border-gray-200 pt-4">
+                      <p className="text-sm text-foreground/60 mb-2">Preview:</p>
+                      <div className="flex border border-gray-200 rounded-lg overflow-hidden bg-white">
+                        {/* Image - left side */}
+                        {linkImage && (
+                          <div className="w-32 h-20 flex-shrink-0 bg-gray-100">
+                            <img
+                              src={linkImage}
+                              alt={linkTitle || 'Link preview'}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        {/* Text content - right side */}
+                        <div className="flex-1 p-3 min-w-0 flex flex-col justify-center">
+                          {linkTitle && (
+                            <h4 className="font-semibold text-foreground text-sm line-clamp-2">
+                              {linkTitle}
+                            </h4>
+                          )}
+                          {linkDescription && (
+                            <p className="text-xs text-foreground/70 line-clamp-2 mt-1">
+                              {linkDescription}
+                            </p>
+                          )}
+                          <p className="text-xs text-foreground/50 truncate mt-1">{url}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
