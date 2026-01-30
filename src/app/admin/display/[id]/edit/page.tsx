@@ -375,8 +375,43 @@ export default function EditDisplay() {
     }
   };
 
+  // Check if display is empty (no title and no media blocks)
+  const isDisplayEmpty = useCallback(() => {
+    const hasTitle = (gallery?.title?.trim().length ?? 0) > 0;
+    const hasMediaBlocks = mediaBlocks.length > 0;
+    return !hasTitle && !hasMediaBlocks;
+  }, [gallery?.title, mediaBlocks.length]);
+
+  // Delete empty gallery silently (no confirmation)
+  const deleteEmptyGallery = useCallback(async () => {
+    if (!gallery) return;
+
+    try {
+      await supabase
+        .from('galleries')
+        .delete()
+        .eq('id', gallery.id);
+    } catch (err) {
+      console.error('Error deleting empty gallery:', err);
+    }
+  }, [gallery, supabase]);
+
+  // Handle back button click
+  const handleBack = async () => {
+    if (isDisplayEmpty()) {
+      await deleteEmptyGallery();
+    }
+    router.push('/admin');
+  };
+
   // Handle Save Changes button click
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
+    if (isDisplayEmpty()) {
+      await deleteEmptyGallery();
+      router.push('/admin');
+      return;
+    }
+
     setSaveChangesButtonText('Saved!');
     setTimeout(() => {
       router.push('/admin');
@@ -453,13 +488,13 @@ export default function EditDisplay() {
               {saveIndicatorText}
             </p>
           </div>
-          <Link
-            href="/admin"
+          <button
+            onClick={handleBack}
             className="px-4 py-2 border border-gray-300 rounded-lg text-foreground/70 hover:text-foreground hover:bg-gray-100 transition-colors"
             aria-label="Back to Dashboard"
           >
             <Undo2 className="w-6 h-6" />
-          </Link>
+          </button>
         </div>
 
         {/* Gallery Title */}
