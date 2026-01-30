@@ -38,6 +38,7 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
   const [linkDescription, setLinkDescription] = useState('');
   const [linkImage, setLinkImage] = useState('');
   const [noPreview, setNoPreview] = useState(false);
+  const [largePreview, setLargePreview] = useState(false);
   const [isFetchingOg, setIsFetchingOg] = useState(false);
 
   const blockTypes = [
@@ -78,6 +79,7 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
         setLinkDescription(content.description || '');
         setLinkImage(content.image || '');
         setNoPreview(content.noPreview || false);
+        setLargePreview(content.largePreview || false);
       }
     }
   }, [editingBlock, isOpen]);
@@ -131,6 +133,7 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
     setLinkDescription('');
     setLinkImage('');
     setNoPreview(false);
+    setLargePreview(false);
     setIsFetchingOg(false);
     setIsLoading(false);
   };
@@ -247,6 +250,7 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
             description: linkDescription,
             image: linkImage,
             noPreview,
+            largePreview,
           },
         });
       }
@@ -424,15 +428,32 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
 
               {selectedType === 'link' && (
                 <>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={noPreview}
-                      onChange={(e) => setNoPreview(e.target.checked)}
-                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-foreground">Hide preview</span>
-                  </label>
+                  <div className="flex items-center gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={largePreview}
+                        onChange={(e) => {
+                          setLargePreview(e.target.checked);
+                          if (e.target.checked) setNoPreview(false);
+                        }}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-foreground">Large preview</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={noPreview}
+                        onChange={(e) => {
+                          setNoPreview(e.target.checked);
+                          if (e.target.checked) setLargePreview(false);
+                        }}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-foreground">Hide preview</span>
+                    </label>
+                  </div>
 
                   {!noPreview && url && validateUrl(url) && (
                     <button
@@ -445,36 +466,63 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
                     </button>
                   )}
 
-                  {/* Link Preview - horizontal layout */}
+                  {/* Link Preview */}
                   {!noPreview && (linkTitle || linkDescription || linkImage) && (
                     <div className="border-t border-gray-200 pt-4">
                       <p className="text-sm text-foreground/60 mb-2">Preview:</p>
-                      <div className="flex border border-gray-200 rounded-lg overflow-hidden bg-white">
-                        {/* Image - left side */}
-                        {linkImage && (
-                          <div className="w-32 h-20 flex-shrink-0 bg-gray-100">
-                            <img
-                              src={linkImage}
-                              alt={linkTitle || 'Link preview'}
-                              className="w-full h-full object-cover"
-                            />
+                      {largePreview ? (
+                        /* Large preview - vertical layout */
+                        <div className="border border-gray-200 rounded-lg overflow-hidden bg-white w-full">
+                          {linkImage && (
+                            <div className="w-full aspect-video bg-gray-100">
+                              <img
+                                src={linkImage}
+                                alt={linkTitle || 'Link preview'}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <div className="p-3 min-w-0">
+                            {linkTitle && (
+                              <h4 className="font-semibold text-foreground text-sm line-clamp-2">
+                                {linkTitle}
+                              </h4>
+                            )}
+                            {linkDescription && (
+                              <p className="text-xs text-foreground/70 line-clamp-2 mt-1">
+                                {linkDescription}
+                              </p>
+                            )}
+                            <p className="text-xs text-foreground/50 truncate mt-1">{url}</p>
                           </div>
-                        )}
-                        {/* Text content - right side */}
-                        <div className="flex-1 p-3 min-w-0 flex flex-col justify-center">
-                          {linkTitle && (
-                            <h4 className="font-semibold text-foreground text-sm line-clamp-2">
-                              {linkTitle}
-                            </h4>
-                          )}
-                          {linkDescription && (
-                            <p className="text-xs text-foreground/70 line-clamp-2 mt-1">
-                              {linkDescription}
-                            </p>
-                          )}
-                          <p className="text-xs text-foreground/50 truncate mt-1">{url}</p>
                         </div>
-                      </div>
+                      ) : (
+                        /* Standard preview - horizontal layout */
+                        <div className="flex border border-gray-200 rounded-lg overflow-hidden bg-white">
+                          {linkImage && (
+                            <div className="w-32 h-20 flex-shrink-0 bg-gray-100">
+                              <img
+                                src={linkImage}
+                                alt={linkTitle || 'Link preview'}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <div className="flex-1 p-3 min-w-0 flex flex-col justify-center">
+                            {linkTitle && (
+                              <h4 className="font-semibold text-foreground text-sm line-clamp-2">
+                                {linkTitle}
+                              </h4>
+                            )}
+                            {linkDescription && (
+                              <p className="text-xs text-foreground/70 line-clamp-2 mt-1">
+                                {linkDescription}
+                              </p>
+                            )}
+                            <p className="text-xs text-foreground/50 truncate mt-1">{url}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </>
