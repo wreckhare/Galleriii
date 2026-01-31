@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Gallery, User, MediaBlock } from '@/types/gallery';
 import { MediaBlock as MediaBlockComponent } from '@/components/media-blocks/MediaBlock';
 import { useGalleryPrefetch } from '@/contexts/GalleryPrefetchContext';
+import { useAdaptiveCentering } from '@/hooks/useAdaptiveCentering';
 
 export default function PublicGalleryViewer() {
   const params = useParams();
@@ -35,6 +36,18 @@ export default function PublicGalleryViewer() {
   // Reveal if all blocks loaded OR failsafe timeout expired
   const allBlocksRevealed = mediaBlocks.length > 0 &&
     (blocksLoadedCount >= mediaBlocks.length || revealTimeoutExpired);
+
+  // Adaptive centering for mobile - must be called before any conditional returns
+  const {
+    headerRef,
+    contentRef,
+    footerRef,
+    layoutMode,
+    headerPadding,
+    footerPadding,
+    contentPadding,
+    isCalculating,
+  } = useAdaptiveCentering({}, allBlocksRevealed);
 
   // Create a stable callback for when a block loads
   const handleBlockLoad = useCallback(() => {
@@ -366,29 +379,93 @@ export default function PublicGalleryViewer() {
     </a>
   );
 
-  // True viewport centering layout
+  // Adaptive viewport centering layout
   if (shouldCenterVertically) {
+    // Show loading state while calculating layout
+    if (isCalculating && !allBlocksRevealed) {
+      return (
+        <div className="h-dvh bg-[#F9F8F6] flex flex-col items-center justify-center">
+          <div className="text-foreground/40 text-sm">Loading...</div>
+          <p className="absolute bottom-8 text-sm font-medium text-foreground/20 tracking-wide">
+            galleriii
+          </p>
+        </div>
+      );
+    }
+
+    // Centered mode - content fits on screen
+    if (layoutMode === 'centered') {
+      return (
+        <div className="h-dvh bg-[#F9F8F6] flex flex-col overflow-hidden">
+          {/* Header with dynamic padding */}
+          <div
+            ref={headerRef}
+            className="flex-shrink-0"
+            style={{ paddingTop: `${headerPadding}px` }}
+          >
+            <div className="max-w-2xl mx-auto px-6 md:px-8">
+              {headerContent}
+            </div>
+          </div>
+
+          {/* Content - centered in remaining space */}
+          <div className="flex-1 flex items-center justify-center overflow-hidden">
+            <div
+              ref={contentRef}
+              className="max-w-2xl mx-auto px-6 md:px-8 w-full"
+              style={{
+                paddingTop: `${contentPadding}px`,
+                paddingBottom: `${contentPadding}px`,
+              }}
+            >
+              {mediaContent}
+            </div>
+          </div>
+
+          {/* Footer with dynamic padding */}
+          <div
+            ref={footerRef}
+            className="flex-shrink-0 flex justify-center"
+            style={{ paddingBottom: `${footerPadding}px` }}
+          >
+            {footerContent}
+          </div>
+        </div>
+      );
+    }
+
+    // Scroll mode - content exceeds viewport, start at top
     return (
-      <div className="min-h-screen bg-[#F9F8F6] relative">
-        {/* Header - absolute positioned at top */}
-        <div className="absolute top-0 left-0 right-0 z-10">
-          <div className="max-w-2xl mx-auto px-6 md:px-8 pt-8">
+      <div className="min-h-dvh bg-[#F9F8F6]">
+        {/* Header */}
+        <div
+          ref={headerRef}
+          style={{ paddingTop: `${headerPadding}px` }}
+        >
+          <div className="max-w-2xl mx-auto px-6 md:px-8">
             {headerContent}
           </div>
         </div>
 
-        {/* Content - true viewport centering */}
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="max-w-2xl mx-auto px-6 md:px-8 w-full py-24">
-            {mediaContent}
-          </div>
+        {/* Content - no centering, flows from top */}
+        <div
+          ref={contentRef}
+          className="max-w-2xl mx-auto px-6 md:px-8"
+          style={{
+            paddingTop: `${contentPadding}px`,
+            paddingBottom: `${contentPadding}px`,
+          }}
+        >
+          {mediaContent}
         </div>
 
-        {/* Footer - absolute positioned at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 z-10">
-          <div className="max-w-2xl mx-auto px-6 md:px-8 pb-8 flex justify-center">
-            {footerContent}
-          </div>
+        {/* Footer */}
+        <div
+          ref={footerRef}
+          className="flex justify-center"
+          style={{ paddingBottom: `${footerPadding}px` }}
+        >
+          {footerContent}
         </div>
       </div>
     );

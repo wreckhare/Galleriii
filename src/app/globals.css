@@ -27,3 +27,14 @@ body {
 * {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Dynamic viewport height utilities for mobile */
+.h-dvh {
+  height: 100vh; /* Fallback for older browsers */
+  height: 100dvh;
+}
+
+.min-h-dvh {
+  min-height: 100vh; /* Fallback for older browsers */
+  min-height: 100dvh;
+}
