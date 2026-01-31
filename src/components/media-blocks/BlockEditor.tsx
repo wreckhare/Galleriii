@@ -25,6 +25,8 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
   const [text, setText] = useState('');
   const [isQuote, setIsQuote] = useState(false);
   const [quoteAuthor, setQuoteAuthor] = useState('');
+  const [sourceTitle, setSourceTitle] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [alignment, setAlignment] = useState<'left' | 'center'>('left');
@@ -60,6 +62,8 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
         setText(content.text || '');
         setIsQuote(content.format === 'quote');
         setQuoteAuthor(content.author || '');
+        setSourceTitle(content.sourceTitle || '');
+        setSourceUrl(content.sourceUrl || '');
         setIsBold(content.styles?.bold || false);
         setIsItalic(content.styles?.italic || false);
         setAlignment(content.styles?.alignment || 'left');
@@ -124,6 +128,8 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
     setText('');
     setIsQuote(false);
     setQuoteAuthor('');
+    setSourceTitle('');
+    setSourceUrl('');
     setIsBold(false);
     setIsItalic(false);
     setAlignment('left');
@@ -162,6 +168,8 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
             text,
             format: isQuote ? 'quote' : 'normal',
             author: isQuote ? quoteAuthor : '',
+            sourceTitle: isQuote ? sourceTitle : '',
+            sourceUrl: isQuote && sourceTitle ? sourceUrl : '',
             styles: {
               bold: isBold,
               italic: isItalic,
@@ -386,6 +394,40 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
                 </div>
               )}
 
+              {/* Source Title (appears when quote is checked) */}
+              {isQuote && (
+                <div>
+                  <label htmlFor="sourceTitle" className="block text-sm font-medium text-foreground mb-2">
+                    Source Title (optional)
+                  </label>
+                  <input
+                    type="text"
+                    id="sourceTitle"
+                    value={sourceTitle}
+                    onChange={(e) => setSourceTitle(e.target.value)}
+                    placeholder="e.g., The Great Gatsby"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              )}
+
+              {/* Source URL (appears only when Source Title has content) */}
+              {isQuote && sourceTitle && (
+                <div>
+                  <label htmlFor="sourceUrl" className="block text-sm font-medium text-foreground mb-2">
+                    Source URL (optional)
+                  </label>
+                  <input
+                    type="url"
+                    id="sourceUrl"
+                    value={sourceUrl}
+                    onChange={(e) => setSourceUrl(e.target.value)}
+                    placeholder="https://example.com/source"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              )}
+
               {/* Preview */}
               {text && (
                 <div className="border-t border-gray-200 pt-4">
@@ -396,9 +438,28 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
                         <p className={`whitespace-pre-wrap ${isBold ? 'font-bold' : ''} ${isItalic ? 'italic' : ''}`}>
                           {text}
                         </p>
-                        {quoteAuthor && (
+                        {(quoteAuthor || sourceTitle) && (
                           <footer className="mt-2 text-sm text-foreground/60 not-italic">
-                            — {quoteAuthor}
+                            {quoteAuthor && <>— {quoteAuthor}</>}
+                            {sourceTitle && (
+                              <>
+                                {quoteAuthor && ' '}
+                                [
+                                {sourceUrl ? (
+                                  <a
+                                    href={sourceUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="italic underline hover:text-foreground/80"
+                                  >
+                                    {sourceTitle}
+                                  </a>
+                                ) : (
+                                  <span className="italic">{sourceTitle}</span>
+                                )}
+                                ]
+                              </>
+                            )}
                           </footer>
                         )}
                       </blockquote>

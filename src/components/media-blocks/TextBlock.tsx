@@ -4,6 +4,8 @@ interface TextBlockProps {
   text: string;
   format?: 'normal' | 'quote';
   author?: string;
+  sourceTitle?: string;
+  sourceUrl?: string;
   styles?: {
     bold?: boolean;
     italic?: boolean;
@@ -11,7 +13,7 @@ interface TextBlockProps {
   };
 }
 
-export function TextBlock({ text, format = 'normal', author, styles = {} }: TextBlockProps) {
+export function TextBlock({ text, format = 'normal', author, sourceTitle, sourceUrl, styles = {} }: TextBlockProps) {
   const baseClasses = 'text-foreground whitespace-pre-wrap';
 
   const styleClasses = [
@@ -25,9 +27,28 @@ export function TextBlock({ text, format = 'normal', author, styles = {} }: Text
     return (
       <blockquote className={`border-l-4 border-gray-300 pl-4 py-2 italic text-foreground/80 ${alignmentClass}`}>
         <p className={`${baseClasses} ${styleClasses}`}>{text}</p>
-        {author && (
+        {(author || sourceTitle) && (
           <footer className="mt-2 text-sm text-foreground/60 not-italic">
-            — {author}
+            {author && <>— {author}</>}
+            {sourceTitle && (
+              <>
+                {author && ' '}
+                [
+                {sourceUrl ? (
+                  <a
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="italic underline hover:text-foreground/80"
+                  >
+                    {sourceTitle}
+                  </a>
+                ) : (
+                  <span className="italic">{sourceTitle}</span>
+                )}
+                ]
+              </>
+            )}
           </footer>
         )}
       </blockquote>

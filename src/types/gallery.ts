@@ -53,6 +53,8 @@ export interface TextBlockContent {
   text: string;
   format?: 'quote' | 'normal';
   author?: string;
+  sourceTitle?: string;
+  sourceUrl?: string;
   styles?: TextBlockStyles;
   html?: string;
 }
