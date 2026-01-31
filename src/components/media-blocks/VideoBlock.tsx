@@ -6,10 +6,26 @@ import { XCircle } from 'lucide-react';
 interface VideoBlockProps {
   url: string;
   platform: 'youtube';
+  onLoad?: () => void;
+  isRevealed?: boolean;
 }
 
-export function VideoBlock({ url }: VideoBlockProps) {
+export function VideoBlock({ url, onLoad, isRevealed = true }: VideoBlockProps) {
   const [hasError, setHasError] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const handleLoad = () => {
+    setIsLoaded(true);
+    onLoad?.();
+  };
+
+  const handleError = () => {
+    setHasError(true);
+    onLoad?.(); // Still notify parent so it doesn't wait forever
+  };
+
+  // Show content when both loaded AND revealed
+  const showContent = isLoaded && isRevealed;
 
   if (hasError) {
     return (
@@ -22,6 +38,11 @@ export function VideoBlock({ url }: VideoBlockProps) {
 
   return (
     <div className="relative w-full aspect-video overflow-hidden">
+      {/* Skeleton loader */}
+      {!showContent && (
+        <div className="absolute inset-0 bg-gray-100 animate-pulse" />
+      )}
+
       <iframe
         src={url}
         width="100%"
@@ -29,8 +50,13 @@ export function VideoBlock({ url }: VideoBlockProps) {
         frameBorder="0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
-        onError={() => setHasError(true)}
+        onLoad={handleLoad}
+        onError={handleError}
         className="absolute inset-0"
+        style={{
+          opacity: showContent ? 1 : 0,
+          transition: 'opacity 0.2s ease-in-out'
+        }}
       />
     </div>
   );

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { GalleryPrefetchProvider } from "@/contexts/GalleryPrefetchContext";
+import { SpotifyPreconnect } from "@/components/SpotifyPreconnect";
 
 export const metadata: Metadata = {
   title: "Galleriii - Curate Your Story",
@@ -14,8 +16,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <SpotifyPreconnect />
+      </head>
       <body className="antialiased">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <GalleryPrefetchProvider>
+            {children}
+          </GalleryPrefetchProvider>
+        </AuthProvider>
       </body>
     </html>
   );

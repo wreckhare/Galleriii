@@ -1,10 +1,11 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Gallery, User, MediaBlock } from '@/types/gallery';
 import { MediaBlock as MediaBlockComponent } from '@/components/media-blocks/MediaBlock';
+import { useGalleryPrefetch } from '@/contexts/GalleryPrefetchContext';
 
 export default function PublicGalleryViewer() {
   const params = useParams();
@@ -18,7 +19,64 @@ export default function PublicGalleryViewer() {
   const [sessionId, setSessionId] = useState<string>('');
   const [loadingNext, setLoadingNext] = useState(false);
 
+  // State for prefetching
+  const [shuffledGalleryIds, setShuffledGalleryIds] = useState<string[]>([]);
+  const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
+
+  // State for synchronized content reveal
+  const [blocksLoadedCount, setBlocksLoadedCount] = useState(0);
+  const [galleryKey, setGalleryKey] = useState(0); // Used to reset load tracking when gallery changes
+  const [revealTimeoutExpired, setRevealTimeoutExpired] = useState(false); // Failsafe timeout
+
+  const { prefetchGallery, getPrefetchedGallery } = useGalleryPrefetch();
   const supabase = createClient();
+
+  // Compute whether all blocks are loaded and ready to reveal
+  // Reveal if all blocks loaded OR failsafe timeout expired
+  const allBlocksRevealed = mediaBlocks.length > 0 &&
+    (blocksLoadedCount >= mediaBlocks.length || revealTimeoutExpired);
+
+  // Create a stable callback for when a block loads
+  const handleBlockLoad = useCallback(() => {
+    setBlocksLoadedCount(prev => prev + 1);
+  }, []);
+
+  // Reset block loading state when gallery changes
+  useEffect(() => {
+    setBlocksLoadedCount(0);
+  }, [galleryKey]);
+
+  // Failsafe timeout: reveal content after 1 second even if not all blocks loaded
+  useEffect(() => {
+    setRevealTimeoutExpired(false);
+    const timer = setTimeout(() => {
+      setRevealTimeoutExpired(true);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [galleryKey]);
+
+  // Compute next gallery ID for prefetching
+  const nextGalleryId = useMemo(() => {
+    if (shuffledGalleryIds.length === 0) return null;
+    const nextIndex = (currentGalleryIndex + 1) % shuffledGalleryIds.length;
+    return shuffledGalleryIds[nextIndex];
+  }, [shuffledGalleryIds, currentGalleryIndex]);
+
+  // Prefetch next gallery when current gallery is displayed
+  useEffect(() => {
+    if (nextGalleryId && !loading) {
+      // Use requestIdleCallback for non-critical prefetch, fallback to setTimeout
+      const prefetchFn = () => prefetchGallery(nextGalleryId);
+
+      if ('requestIdleCallback' in window) {
+        const id = (window as typeof window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(prefetchFn, { timeout: 2000 });
+        return () => (window as typeof window & { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(id);
+      } else {
+        const timer = setTimeout(prefetchFn, 100);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [nextGalleryId, loading, prefetchGallery]);
 
   // Initialize session ID
   useEffect(() => {
@@ -76,12 +134,12 @@ export default function PublicGalleryViewer() {
   // Load the next gallery in the shuffled sequence
   const loadRandomGallery = async (userId: string) => {
     try {
-      // Fetch all non-hidden galleries with their media blocks
+      // Fetch all non-hidden galleries with their FULL media blocks in a single query
       const { data: galleriesWithBlocks, error: galleriesError } = await supabase
         .from('galleries')
         .select(`
           *,
-          media_blocks(id)
+          media_blocks(*)
         `)
         .eq('user_id', userId)
         .eq('is_hidden', false)
@@ -128,27 +186,42 @@ export default function PublicGalleryViewer() {
       const currentIndex = parseInt(localStorage.getItem(indexKey) || '0', 10);
 
       // Find the gallery at this index
-      let nextGallery = galleries.find(g => g.id === shuffledIds[currentIndex]);
+      const targetGalleryId = shuffledIds[currentIndex];
+      let targetGallery = galleries.find(g => g.id === targetGalleryId);
 
-      if (!nextGallery) {
+      if (!targetGallery) {
         // Fallback: pick first gallery if something went wrong
-        nextGallery = galleries[0];
+        targetGallery = galleries[0];
       }
 
       // Move index forward for next time (wraps around)
       const nextIndex = (currentIndex + 1) % shuffledIds.length;
       localStorage.setItem(indexKey, nextIndex.toString());
 
-      setCurrentGallery(nextGallery as Gallery);
+      // Store shuffled IDs and current index for prefetching
+      setShuffledGalleryIds(shuffledIds);
+      setCurrentGalleryIndex(currentIndex);
 
-      // Load media blocks for this gallery
-      const { data: blocks } = await supabase
-        .from('media_blocks')
-        .select('*')
-        .eq('gallery_id', nextGallery.id)
-        .order('position', { ascending: true });
+      // Check if we have prefetched data for this gallery
+      const prefetched = getPrefetchedGallery(targetGalleryId);
 
-      setMediaBlocks((blocks as MediaBlock[]) || []);
+      // Reset block loading state for new gallery
+      setGalleryKey(prev => prev + 1);
+
+      if (prefetched) {
+        // Use prefetched data - instant!
+        setCurrentGallery(prefetched.gallery);
+        setMediaBlocks(prefetched.mediaBlocks);
+        setLoading(false);
+        return;
+      }
+
+      // Use blocks from the single query (already fetched with gallery)
+      // Sort by position to ensure correct order
+      const blocks = [...targetGallery.media_blocks].sort((a, b) => a.position - b.position);
+
+      setCurrentGallery(targetGallery as Gallery);
+      setMediaBlocks(blocks as MediaBlock[]);
       setLoading(false);
     } catch (err) {
       console.error('Error loading gallery:', err);
@@ -229,65 +302,113 @@ export default function PublicGalleryViewer() {
 
   const shouldCenterVertically = user.center_media_vertical;
 
-  return (
-    <div className={`min-h-screen bg-[#F9F8F6] ${shouldCenterVertically ? 'flex flex-col' : ''}`}>
-      <div className={`max-w-2xl mx-auto px-6 md:px-8 w-full ${shouldCenterVertically ? 'flex flex-col flex-1' : 'py-8'}`}>
-        {/* Header with title and Next button */}
-        <div className={`flex items-center justify-between mb-8 ${shouldCenterVertically ? 'pt-8' : ''}`}>
-          <div>
-            {!currentGallery.hide_title && currentGallery.title && (
-              <h1 className="text-2xl font-semibold text-foreground leading-tight">
-                {currentGallery.title}
-              </h1>
-            )}
-            <p className={`text-sm text-foreground/50 ${!currentGallery.hide_title && currentGallery.title ? 'mt-2' : ''}`}>
-              @{username}
-            </p>
-          </div>
-          {/* Next button - desktop only, styled like a keyboard key */}
-          <button
-            onClick={handleNextClick}
-            disabled={loadingNext}
-            className="hidden md:flex items-center justify-center w-10 h-10 rounded-lg border-2 border-foreground/20 bg-gradient-to-b from-white to-gray-100 shadow-[0_2px_0_0_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] hover:from-gray-50 hover:to-gray-150 hover:border-foreground/30 active:shadow-[0_0px_0_0_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] active:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Next gallery (→)"
+  // Header content (shared between both layouts)
+  const headerContent = (
+    <div className="flex items-center justify-between">
+      <div>
+        {!currentGallery.hide_title && currentGallery.title && (
+          <h1 className="text-2xl font-semibold text-foreground leading-tight">
+            {currentGallery.title}
+          </h1>
+        )}
+        <p className={`text-sm text-foreground/50 ${!currentGallery.hide_title && currentGallery.title ? 'mt-2' : ''}`}>
+          @{username}
+        </p>
+      </div>
+      {/* Next button - desktop only, styled like a keyboard key */}
+      <button
+        onClick={handleNextClick}
+        disabled={loadingNext}
+        className="hidden md:flex items-center justify-center w-10 h-10 rounded-lg border-2 border-foreground/20 bg-gradient-to-b from-white to-gray-100 shadow-[0_2px_0_0_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] hover:from-gray-50 hover:to-gray-150 hover:border-foreground/30 active:shadow-[0_0px_0_0_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] active:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Next gallery (→)"
+      >
+        {loadingNext ? (
+          <span className="text-foreground/50 text-sm">...</span>
+        ) : (
+          <svg
+            className="w-5 h-5 text-foreground/60"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            {loadingNext ? (
-              <span className="text-foreground/50 text-sm">...</span>
-            ) : (
-              <svg
-                className="w-5 h-5 text-foreground/60"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M9 18l6-6-6-6" />
-              </svg>
-            )}
-          </button>
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
+
+  // Media blocks content (shared between both layouts)
+  const mediaContent = (
+    <div className="space-y-6">
+      {mediaBlocks.map((block) => (
+        <div key={block.id} className="w-full">
+          <MediaBlockComponent
+            block={block}
+            onLoad={handleBlockLoad}
+            isRevealed={allBlocksRevealed}
+          />
+        </div>
+      ))}
+    </div>
+  );
+
+  // Footer content (shared between both layouts)
+  const footerContent = (
+    <a
+      href="/"
+      className="text-sm font-medium text-foreground/20 tracking-wide hover:text-foreground/40 transition-colors"
+    >
+      galleriii
+    </a>
+  );
+
+  // True viewport centering layout
+  if (shouldCenterVertically) {
+    return (
+      <div className="min-h-screen bg-[#F9F8F6] relative">
+        {/* Header - absolute positioned at top */}
+        <div className="absolute top-0 left-0 right-0 z-10">
+          <div className="max-w-2xl mx-auto px-6 md:px-8 pt-8">
+            {headerContent}
+          </div>
         </div>
 
-        {/* Media Blocks - centered vertically when setting enabled */}
-        <div className={shouldCenterVertically ? 'flex-1 flex flex-col justify-center' : ''}>
-          <div className="space-y-6">
-            {mediaBlocks.map((block) => (
-              <div key={block.id} className="w-full">
-                <MediaBlockComponent block={block} />
-              </div>
-            ))}
+        {/* Content - true viewport centering */}
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="max-w-2xl mx-auto px-6 md:px-8 w-full py-24">
+            {mediaContent}
           </div>
         </div>
+
+        {/* Footer - absolute positioned at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 z-10">
+          <div className="max-w-2xl mx-auto px-6 md:px-8 pb-8 flex justify-center">
+            {footerContent}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Standard layout (non-centered)
+  return (
+    <div className="min-h-screen bg-[#F9F8F6]">
+      <div className="max-w-2xl mx-auto px-6 md:px-8 w-full py-8">
+        {/* Header */}
+        <div className="mb-8">
+          {headerContent}
+        </div>
+
+        {/* Media Blocks */}
+        {mediaContent}
 
         {/* Footer Branding */}
-        <div className={`flex flex-col items-center ${shouldCenterVertically ? 'pb-8' : 'mt-8 pb-4'}`}>
-          <a
-            href="/"
-            className="text-sm font-medium text-foreground/20 tracking-wide hover:text-foreground/40 transition-colors"
-          >
-            galleriii
-          </a>
+        <div className="flex flex-col items-center mt-8 pb-4">
+          {footerContent}
         </div>
       </div>
     </div>

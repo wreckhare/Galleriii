@@ -8,15 +8,30 @@ interface MediaImageLoaderProps {
   alt: string;
   /** Media type for error message (e.g., "Image", "GIF") */
   mediaType: 'Image' | 'GIF';
+  onLoad?: () => void;
+  isRevealed?: boolean;
 }
 
 /**
  * Reusable image loader with loading state and error handling.
  * Used by ImageBlock and GifBlock.
  */
-export function MediaImageLoader({ url, alt, mediaType }: MediaImageLoaderProps) {
+export function MediaImageLoader({ url, alt, mediaType, onLoad, isRevealed = true }: MediaImageLoaderProps) {
   const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const handleLoad = () => {
+    setIsLoaded(true);
+    onLoad?.();
+  };
+
+  const handleError = () => {
+    setHasError(true);
+    onLoad?.(); // Still notify parent so it doesn't wait forever
+  };
+
+  // Show content when both loaded AND revealed
+  const showContent = isLoaded && isRevealed;
 
   if (hasError) {
     return <MediaErrorFallback mediaType={mediaType} />;
@@ -24,15 +39,15 @@ export function MediaImageLoader({ url, alt, mediaType }: MediaImageLoaderProps)
 
   return (
     <div className="relative w-full">
-      {isLoading && (
+      {!showContent && (
         <div className="absolute inset-0 bg-gray-100 animate-pulse min-h-[200px]" />
       )}
       <img
         src={url}
         alt={alt}
-        onError={() => setHasError(true)}
-        onLoad={() => setIsLoading(false)}
-        className={`w-full h-auto ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+        onError={handleError}
+        onLoad={handleLoad}
+        className={`w-full h-auto ${showContent ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
       />
     </div>
   );

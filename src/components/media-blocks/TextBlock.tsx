@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect } from 'react';
 
 interface TextBlockProps {
   text: string;
@@ -11,10 +13,18 @@ interface TextBlockProps {
     italic?: boolean;
     alignment?: 'left' | 'center';
   };
+  onLoad?: () => void;
+  isRevealed?: boolean;
 }
 
-export function TextBlock({ text, format = 'normal', author, sourceTitle, sourceUrl, styles = {} }: TextBlockProps) {
+export function TextBlock({ text, format = 'normal', author, sourceTitle, sourceUrl, styles = {}, onLoad, isRevealed = true }: TextBlockProps) {
+  // Text blocks are instantly ready - notify parent immediately
+  useEffect(() => {
+    onLoad?.();
+  }, [onLoad]);
+
   const baseClasses = 'text-foreground whitespace-pre-wrap';
+  const transitionClasses = `transition-opacity duration-300 ${isRevealed ? 'opacity-100' : 'opacity-0'}`;
 
   const styleClasses = [
     styles.bold && 'font-bold',
@@ -25,7 +35,7 @@ export function TextBlock({ text, format = 'normal', author, sourceTitle, source
 
   if (format === 'quote') {
     return (
-      <blockquote className={`border-l-4 border-gray-300 pl-4 py-2 italic text-foreground/80 ${alignmentClass}`}>
+      <blockquote className={`border-l-4 border-gray-300 pl-4 py-2 italic text-foreground/80 ${alignmentClass} ${transitionClasses}`}>
         <p className={`${baseClasses} ${styleClasses}`}>{text}</p>
         {(author || sourceTitle) && (
           <footer className="mt-2 text-sm text-foreground/60 not-italic">
@@ -55,5 +65,5 @@ export function TextBlock({ text, format = 'normal', author, sourceTitle, source
     );
   }
 
-  return <p className={`${baseClasses} ${styleClasses} ${alignmentClass}`}>{text}</p>;
+  return <p className={`${baseClasses} ${styleClasses} ${alignmentClass} ${transitionClasses}`}>{text}</p>;
 }
