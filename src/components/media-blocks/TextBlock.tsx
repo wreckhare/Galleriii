@@ -7,7 +7,7 @@ interface TextBlockProps {
   styles?: {
     bold?: boolean;
     italic?: boolean;
-    underline?: boolean;
+    alignment?: 'left' | 'center';
   };
 }
 
@@ -17,12 +17,13 @@ export function TextBlock({ text, format = 'normal', author, styles = {} }: Text
   const styleClasses = [
     styles.bold && 'font-bold',
     styles.italic && 'italic',
-    styles.underline && 'underline',
   ].filter(Boolean).join(' ');
+
+  const alignmentClass = styles.alignment === 'center' ? 'text-center' : 'text-left';
 
   if (format === 'quote') {
     return (
-      <blockquote className="border-l-4 border-gray-300 pl-4 py-2 italic text-foreground/80">
+      <blockquote className={`border-l-4 border-gray-300 pl-4 py-2 italic text-foreground/80 ${alignmentClass}`}>
         <p className={`${baseClasses} ${styleClasses}`}>{text}</p>
         {author && (
           <footer className="mt-2 text-sm text-foreground/60 not-italic">
@@ -33,5 +34,5 @@ export function TextBlock({ text, format = 'normal', author, styles = {} }: Text
     );
   }
 
-  return <p className={`${baseClasses} ${styleClasses}`}>{text}</p>;
+  return <p className={`${baseClasses} ${styleClasses} ${alignmentClass}`}>{text}</p>;
 }

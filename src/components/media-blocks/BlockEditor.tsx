@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Type, Image, Film, Music, Video, Link as LinkIcon } from 'lucide-react';
+import { X, Type, Image, Film, Music, Video, Link as LinkIcon, AlignLeft, AlignCenter } from 'lucide-react';
 import { MediaBlock } from '@/types/gallery';
 import { validateUrl, convertSpotifyUrl, convertYouTubeUrl } from '@/lib/utils/mediaEmbed';
 
@@ -27,7 +27,7 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
   const [quoteAuthor, setQuoteAuthor] = useState('');
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
-  const [isUnderline, setIsUnderline] = useState(false);
+  const [alignment, setAlignment] = useState<'left' | 'center'>('left');
 
   // URL-based blocks state
   const [url, setUrl] = useState('');
@@ -62,7 +62,7 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
         setQuoteAuthor(content.author || '');
         setIsBold(content.styles?.bold || false);
         setIsItalic(content.styles?.italic || false);
-        setIsUnderline(content.styles?.underline || false);
+        setAlignment(content.styles?.alignment || 'left');
       } else if (editingBlock.type === 'image' || editingBlock.type === 'gif') {
         const content = editingBlock.content as any;
         setUrl(content.url || '');
@@ -126,7 +126,7 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
     setQuoteAuthor('');
     setIsBold(false);
     setIsItalic(false);
-    setIsUnderline(false);
+    setAlignment('left');
     setUrl('');
     setUrlError('');
     setLinkTitle('');
@@ -165,7 +165,7 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
             styles: {
               bold: isBold,
               italic: isItalic,
-              underline: isUnderline,
+              alignment: alignment,
             },
           },
         });
@@ -316,23 +316,37 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
                 <button
                   type="button"
                   onClick={() => setIsBold(!isBold)}
-                  className={`px-3 py-1 rounded ${isBold ? 'bg-gray-300' : 'bg-white'} border border-gray-300 font-bold hover:bg-gray-200 transition-colors`}
+                  className={`px-3 py-1 rounded ${isBold ? 'bg-gray-300 shadow-inner border-2 border-gray-500' : 'bg-white border border-gray-300'} font-bold hover:bg-gray-200 transition-colors`}
                 >
                   B
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsItalic(!isItalic)}
-                  className={`px-3 py-1 rounded ${isItalic ? 'bg-gray-300' : 'bg-white'} border border-gray-300 italic hover:bg-gray-200 transition-colors`}
+                  className={`px-3 py-1 rounded ${isItalic ? 'bg-gray-300 shadow-inner border-2 border-gray-500' : 'bg-white border border-gray-300'} italic hover:bg-gray-200 transition-colors`}
                 >
                   I
                 </button>
+
+                {/* Divider */}
+                <div className="w-px bg-gray-300 mx-1" />
+
+                {/* Alignment buttons */}
                 <button
                   type="button"
-                  onClick={() => setIsUnderline(!isUnderline)}
-                  className={`px-3 py-1 rounded ${isUnderline ? 'bg-gray-300' : 'bg-white'} border border-gray-300 underline hover:bg-gray-200 transition-colors`}
+                  onClick={() => setAlignment('left')}
+                  className={`px-2 py-1 rounded ${alignment === 'left' ? 'bg-gray-300 shadow-inner border-2 border-gray-500' : 'bg-white border border-gray-300'} hover:bg-gray-200 transition-colors`}
+                  title="Align left"
                 >
-                  U
+                  <AlignLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAlignment('center')}
+                  className={`px-2 py-1 rounded ${alignment === 'center' ? 'bg-gray-300 shadow-inner border-2 border-gray-500' : 'bg-white border border-gray-300'} hover:bg-gray-200 transition-colors`}
+                  title="Align center"
+                >
+                  <AlignCenter className="w-4 h-4" />
                 </button>
               </div>
 
@@ -376,10 +390,10 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
               {text && (
                 <div className="border-t border-gray-200 pt-4">
                   <p className="text-sm text-foreground/60 mb-2">Preview:</p>
-                  <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className={`p-4 bg-gray-50 rounded-lg ${alignment === 'center' ? 'text-center' : 'text-left'}`}>
                     {isQuote ? (
                       <blockquote className="border-l-4 border-gray-300 pl-4 py-2 italic text-foreground/80">
-                        <p className={`whitespace-pre-wrap ${isBold ? 'font-bold' : ''} ${isItalic ? 'italic' : ''} ${isUnderline ? 'underline' : ''}`}>
+                        <p className={`whitespace-pre-wrap ${isBold ? 'font-bold' : ''} ${isItalic ? 'italic' : ''}`}>
                           {text}
                         </p>
                         {quoteAuthor && (
@@ -389,7 +403,7 @@ export function BlockEditor({ isOpen, onClose, onSave, editingBlock }: BlockEdit
                         )}
                       </blockquote>
                     ) : (
-                      <p className={`whitespace-pre-wrap ${isBold ? 'font-bold' : ''} ${isItalic ? 'italic' : ''} ${isUnderline ? 'underline' : ''}`}>
+                      <p className={`whitespace-pre-wrap ${isBold ? 'font-bold' : ''} ${isItalic ? 'italic' : ''}`}>
                         {text}
                       </p>
                     )}

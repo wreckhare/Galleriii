@@ -41,11 +41,19 @@ export type MediaBlockContent =
   | VideoBlockContent
   | LinkBlockContent;
 
+export type TextAlignment = 'left' | 'center';
+
+export interface TextBlockStyles {
+  bold?: boolean;
+  italic?: boolean;
+  alignment?: TextAlignment;
+}
+
 export interface TextBlockContent {
   text: string;
   format?: 'quote' | 'normal';
-  // Stores formatting information for bold, italic, underline
-  // Using Tiptap's HTML format
+  author?: string;
+  styles?: TextBlockStyles;
   html?: string;
 }
 
