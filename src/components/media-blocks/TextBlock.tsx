@@ -39,7 +39,7 @@ export function TextBlock({ text, format = 'normal', author, sourceTitle, source
                     href={sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="italic underline hover:text-foreground/80"
+                    className="italic text-blue-600 hover:text-blue-800"
                   >
                     {sourceTitle}
                   </a>
