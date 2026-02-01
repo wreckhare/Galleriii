@@ -7,6 +7,7 @@ import { Gallery, User, MediaBlock } from '@/types/gallery';
 import { MediaBlock as MediaBlockComponent } from '@/components/media-blocks/MediaBlock';
 import { useGalleryPrefetch } from '@/contexts/GalleryPrefetchContext';
 import { useAdaptiveCentering } from '@/hooks/useAdaptiveCentering';
+import { Info, X } from 'lucide-react';
 
 export default function PublicGalleryViewer() {
   const params = useParams();
@@ -28,6 +29,7 @@ export default function PublicGalleryViewer() {
   const [blocksLoadedCount, setBlocksLoadedCount] = useState(0);
   const [galleryKey, setGalleryKey] = useState(0); // Used to reset load tracking when gallery changes
   const [revealTimeoutExpired, setRevealTimeoutExpired] = useState(false); // Failsafe timeout
+  const [showInfoPopup, setShowInfoPopup] = useState(false);
 
   const { prefetchGallery, getPrefetchedGallery } = useGalleryPrefetch();
   const supabase = createClient();
@@ -328,29 +330,40 @@ export default function PublicGalleryViewer() {
           @{username}
         </p>
       </div>
-      {/* Next button - desktop only, styled like a keyboard key */}
-      <button
-        onClick={handleNextClick}
-        disabled={loadingNext}
-        className="hidden md:flex items-center justify-center w-10 h-10 rounded-lg border-2 border-foreground/20 bg-gradient-to-b from-white to-gray-100 shadow-[0_2px_0_0_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] hover:from-gray-50 hover:to-gray-150 hover:border-foreground/30 active:shadow-[0_0px_0_0_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] active:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        title="Next gallery (→)"
-      >
-        {loadingNext ? (
-          <span className="text-foreground/50 text-sm">...</span>
-        ) : (
-          <svg
-            className="w-5 h-5 text-foreground/60"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M9 18l6-6-6-6" />
-          </svg>
-        )}
-      </button>
+      {/* Button container - holds both mobile info and desktop next buttons */}
+      <div className="flex items-center gap-2">
+        {/* Info button - mobile only */}
+        <button
+          onClick={() => setShowInfoPopup(true)}
+          className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg border-2 border-foreground/20 bg-gradient-to-b from-white to-gray-100 shadow-[0_2px_0_0_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] active:shadow-[0_0px_0_0_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] active:translate-y-[2px] transition-all"
+          aria-label="Gallery information"
+        >
+          <Info className="w-5 h-5 text-foreground/60" />
+        </button>
+        {/* Next button - desktop only, styled like a keyboard key */}
+        <button
+          onClick={handleNextClick}
+          disabled={loadingNext}
+          className="hidden md:flex items-center justify-center w-10 h-10 rounded-lg border-2 border-foreground/20 bg-gradient-to-b from-white to-gray-100 shadow-[0_2px_0_0_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] hover:from-gray-50 hover:to-gray-150 hover:border-foreground/30 active:shadow-[0_0px_0_0_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] active:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Next gallery (→)"
+        >
+          {loadingNext ? (
+            <span className="text-foreground/50 text-sm">...</span>
+          ) : (
+            <svg
+              className="w-5 h-5 text-foreground/60"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          )}
+        </button>
+      </div>
     </div>
   );
 
@@ -377,6 +390,39 @@ export default function PublicGalleryViewer() {
     >
       galleriii
     </a>
+  );
+
+  // Info popup for mobile users
+  const infoPopup = showInfoPopup && (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6"
+      onClick={() => setShowInfoPopup(false)}
+    >
+      <div
+        className="rounded-xl shadow-2xl max-w-sm w-full p-6 relative"
+        style={{ backgroundColor: '#FFFFFF' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={() => setShowInfoPopup(false)}
+          className="absolute top-4 right-4 text-foreground/50 hover:text-foreground transition-colors"
+          aria-label="Close"
+        >
+          <X className="w-5 h-5" />
+        </button>
+        <div className="space-y-4 pr-6">
+          <p className="text-foreground text-sm leading-relaxed">
+            To see next gallery, pull down to refresh page
+          </p>
+          <p className="text-foreground/70 text-sm leading-relaxed">
+            galleriii is a simple tool for simple curation
+          </p>
+          <p className="text-foreground/70 text-sm leading-relaxed">
+            If you want to build a sharable gallery for yourself, send me (Austin) a message
+          </p>
+        </div>
+      </div>
+    </div>
   );
 
   // Adaptive viewport centering layout
@@ -430,6 +476,7 @@ export default function PublicGalleryViewer() {
           >
             {footerContent}
           </div>
+          {infoPopup}
         </div>
       );
     }
@@ -467,6 +514,7 @@ export default function PublicGalleryViewer() {
         >
           {footerContent}
         </div>
+        {infoPopup}
       </div>
     );
   }
@@ -488,6 +536,7 @@ export default function PublicGalleryViewer() {
           {footerContent}
         </div>
       </div>
+      {infoPopup}
     </div>
   );
 }
