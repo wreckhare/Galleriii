@@ -1,31 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { XCircle } from 'lucide-react';
 
 interface VideoBlockProps {
   url: string;
   platform: 'youtube';
-  onLoad?: () => void;
-  isRevealed?: boolean;
 }
 
-export function VideoBlock({ url, onLoad, isRevealed = true }: VideoBlockProps) {
+export function VideoBlock({ url }: VideoBlockProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-
-  const handleLoad = () => {
-    setIsLoaded(true);
-    onLoad?.();
-  };
-
-  const handleError = () => {
-    setHasError(true);
-    onLoad?.(); // Still notify parent so it doesn't wait forever
-  };
-
-  // Show content when both loaded AND revealed
-  const showContent = isLoaded && isRevealed;
 
   if (hasError) {
     return (
@@ -39,7 +24,7 @@ export function VideoBlock({ url, onLoad, isRevealed = true }: VideoBlockProps) 
   return (
     <div className="relative w-full aspect-video overflow-hidden">
       {/* Skeleton loader */}
-      {!showContent && (
+      {!isLoaded && (
         <div className="absolute inset-0 bg-gray-100 animate-pulse" />
       )}
 
@@ -50,11 +35,11 @@ export function VideoBlock({ url, onLoad, isRevealed = true }: VideoBlockProps) 
         frameBorder="0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
-        onLoad={handleLoad}
-        onError={handleError}
+        onLoad={() => setIsLoaded(true)}
+        onError={() => setHasError(true)}
         className="absolute inset-0"
         style={{
-          opacity: showContent ? 1 : 0,
+          opacity: isLoaded ? 1 : 0,
           transition: 'opacity 0.2s ease-in-out'
         }}
       />

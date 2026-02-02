@@ -1,8 +1,5 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { ExternalLink } from 'lucide-react';
-
 interface LinkBlockProps {
   url: string;
   title?: string;
@@ -10,8 +7,6 @@ interface LinkBlockProps {
   image?: string;
   noPreview?: boolean;
   largePreview?: boolean;
-  onLoad?: () => void;
-  isRevealed?: boolean;
 }
 
 function formatDisplayUrl(url: string): string {
@@ -25,14 +20,7 @@ function formatDisplayUrl(url: string): string {
   }
 }
 
-export function LinkBlock({ url, title, description, image, noPreview, largePreview, onLoad, isRevealed = true }: LinkBlockProps) {
-  // Link blocks are treated as instantly ready (preview images are decorative)
-  useEffect(() => {
-    onLoad?.();
-  }, [onLoad]);
-
-  const transitionClasses = `transition-opacity duration-300 ${isRevealed ? 'opacity-100' : 'opacity-0'}`;
-
+export function LinkBlock({ url, title, description, image, noPreview, largePreview }: LinkBlockProps) {
   // Minimal display: grey underlined text only
   if (noPreview) {
     return (
@@ -40,7 +28,7 @@ export function LinkBlock({ url, title, description, image, noPreview, largePrev
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className={`block p-4 text-foreground/60 underline hover:text-foreground/80 transition-colors truncate ${transitionClasses}`}
+        className="block p-4 text-foreground/60 underline hover:text-foreground/80 transition-colors truncate"
       >
         {formatDisplayUrl(url)}
       </a>
@@ -54,7 +42,7 @@ export function LinkBlock({ url, title, description, image, noPreview, largePrev
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className={`block bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 hover:shadow-md transition-all duration-200 w-full ${transitionClasses}`}
+        className="block bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 hover:shadow-md transition-all duration-200 w-full"
       >
         {image && (
           <div className="w-full aspect-video bg-gray-100">
@@ -88,7 +76,7 @@ export function LinkBlock({ url, title, description, image, noPreview, largePrev
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`flex bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 hover:shadow-md transition-all duration-200 ${transitionClasses}`}
+      className="flex bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 hover:shadow-md transition-all duration-200"
     >
       {/* Image - left side */}
       {image && (

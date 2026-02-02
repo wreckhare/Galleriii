@@ -9,29 +9,27 @@ import { MediaBlock as MediaBlockType } from '@/types/gallery';
 
 interface MediaBlockProps {
   block: MediaBlockType;
-  onLoad?: () => void;
-  isRevealed?: boolean;
 }
 
-export function MediaBlock({ block, onLoad, isRevealed }: MediaBlockProps) {
+export function MediaBlock({ block }: MediaBlockProps) {
   switch (block.type) {
     case 'text':
-      return <TextBlock {...(block.content as any)} onLoad={onLoad} isRevealed={isRevealed} />;
+      return <TextBlock {...(block.content as any)} />;
 
     case 'image':
-      return <ImageBlock {...(block.content as any)} onLoad={onLoad} isRevealed={isRevealed} />;
+      return <ImageBlock {...(block.content as any)} />;
 
     case 'gif':
-      return <GifBlock {...(block.content as any)} onLoad={onLoad} isRevealed={isRevealed} />;
+      return <GifBlock {...(block.content as any)} />;
 
     case 'music':
-      return <MusicBlock {...(block.content as any)} onLoad={onLoad} isRevealed={isRevealed} />;
+      return <MusicBlock {...(block.content as any)} />;
 
     case 'video':
-      return <VideoBlock {...(block.content as any)} onLoad={onLoad} isRevealed={isRevealed} />;
+      return <VideoBlock {...(block.content as any)} />;
 
     case 'link':
-      return <LinkBlock {...(block.content as any)} onLoad={onLoad} isRevealed={isRevealed} />;
+      return <LinkBlock {...(block.content as any)} />;
 
     default:
       return (

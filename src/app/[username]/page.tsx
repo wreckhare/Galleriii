@@ -1,11 +1,10 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Gallery, User, MediaBlock } from '@/types/gallery';
 import { MediaBlock as MediaBlockComponent } from '@/components/media-blocks/MediaBlock';
-import { useGalleryPrefetch } from '@/contexts/GalleryPrefetchContext';
 import { useAdaptiveCentering } from '@/hooks/useAdaptiveCentering';
 import { Info, X } from 'lucide-react';
 
@@ -20,26 +19,11 @@ export default function PublicGalleryViewer() {
   const [error, setError] = useState('');
   const [sessionId, setSessionId] = useState<string>('');
   const [loadingNext, setLoadingNext] = useState(false);
-
-  // State for prefetching
-  const [shuffledGalleryIds, setShuffledGalleryIds] = useState<string[]>([]);
-  const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
-
-  // State for synchronized content reveal
-  const [blocksLoadedCount, setBlocksLoadedCount] = useState(0);
-  const [galleryKey, setGalleryKey] = useState(0); // Used to reset load tracking when gallery changes
-  const [revealTimeoutExpired, setRevealTimeoutExpired] = useState(false); // Failsafe timeout
   const [showInfoPopup, setShowInfoPopup] = useState(false);
 
-  const { prefetchGallery, getPrefetchedGallery } = useGalleryPrefetch();
   const supabase = createClient();
 
-  // Compute whether all blocks are loaded and ready to reveal
-  // Reveal if all blocks loaded OR failsafe timeout expired
-  const allBlocksRevealed = mediaBlocks.length > 0 &&
-    (blocksLoadedCount >= mediaBlocks.length || revealTimeoutExpired);
-
-  // Adaptive centering for mobile - must be called before any conditional returns
+  // Adaptive centering for mobile
   const {
     headerRef,
     contentRef,
@@ -48,50 +32,7 @@ export default function PublicGalleryViewer() {
     headerPadding,
     footerPadding,
     contentPadding,
-    isCalculating,
-  } = useAdaptiveCentering({}, allBlocksRevealed);
-
-  // Create a stable callback for when a block loads
-  const handleBlockLoad = useCallback(() => {
-    setBlocksLoadedCount(prev => prev + 1);
-  }, []);
-
-  // Reset block loading state when gallery changes
-  useEffect(() => {
-    setBlocksLoadedCount(0);
-  }, [galleryKey]);
-
-  // Failsafe timeout: reveal content after 1 second even if not all blocks loaded
-  useEffect(() => {
-    setRevealTimeoutExpired(false);
-    const timer = setTimeout(() => {
-      setRevealTimeoutExpired(true);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [galleryKey]);
-
-  // Compute next gallery ID for prefetching
-  const nextGalleryId = useMemo(() => {
-    if (shuffledGalleryIds.length === 0) return null;
-    const nextIndex = (currentGalleryIndex + 1) % shuffledGalleryIds.length;
-    return shuffledGalleryIds[nextIndex];
-  }, [shuffledGalleryIds, currentGalleryIndex]);
-
-  // Prefetch next gallery when current gallery is displayed
-  useEffect(() => {
-    if (nextGalleryId && !loading) {
-      // Use requestIdleCallback for non-critical prefetch, fallback to setTimeout
-      const prefetchFn = () => prefetchGallery(nextGalleryId);
-
-      if ('requestIdleCallback' in window) {
-        const id = (window as typeof window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(prefetchFn, { timeout: 2000 });
-        return () => (window as typeof window & { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(id);
-      } else {
-        const timer = setTimeout(prefetchFn, 100);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [nextGalleryId, loading, prefetchGallery]);
+  } = useAdaptiveCentering({});
 
   // Initialize session ID
   useEffect(() => {
@@ -149,29 +90,15 @@ export default function PublicGalleryViewer() {
   // Load the next gallery in the shuffled sequence
   const loadRandomGallery = async (userId: string) => {
     try {
-      // Fetch all non-hidden galleries with their FULL media blocks in a single query
-      const { data: galleriesWithBlocks, error: galleriesError } = await supabase
+      // Fetch all non-hidden galleries (without media blocks)
+      const { data: galleries, error: galleriesError } = await supabase
         .from('galleries')
-        .select(`
-          *,
-          media_blocks(*)
-        `)
+        .select('*')
         .eq('user_id', userId)
         .eq('is_hidden', false)
         .order('position', { ascending: true });
 
-      if (galleriesError || !galleriesWithBlocks) {
-        setError('No galleries available');
-        setLoading(false);
-        return;
-      }
-
-      // Filter out galleries that have no media blocks
-      const galleries = galleriesWithBlocks.filter(
-        g => g.media_blocks && g.media_blocks.length > 0
-      );
-
-      if (galleries.length === 0) {
+      if (galleriesError || !galleries || galleries.length === 0) {
         setError('No galleries available');
         setLoading(false);
         return;
@@ -213,27 +140,45 @@ export default function PublicGalleryViewer() {
       const nextIndex = (currentIndex + 1) % shuffledIds.length;
       localStorage.setItem(indexKey, nextIndex.toString());
 
-      // Store shuffled IDs and current index for prefetching
-      setShuffledGalleryIds(shuffledIds);
-      setCurrentGalleryIndex(currentIndex);
+      // Now fetch media blocks for just this gallery
+      const { data: blocks, error: blocksError } = await supabase
+        .from('media_blocks')
+        .select('*')
+        .eq('gallery_id', targetGallery.id)
+        .order('position', { ascending: true });
 
-      // Check if we have prefetched data for this gallery
-      const prefetched = getPrefetchedGallery(targetGalleryId);
+      if (blocksError) {
+        console.error('Error loading media blocks:', blocksError);
+      }
 
-      // Reset block loading state for new gallery
-      setGalleryKey(prev => prev + 1);
+      // If this gallery has no blocks, try the next one
+      if (!blocks || blocks.length === 0) {
+        // Try to find another gallery with blocks
+        for (let i = 0; i < shuffledIds.length; i++) {
+          const altIndex = (currentIndex + i) % shuffledIds.length;
+          const altGalleryId = shuffledIds[altIndex];
+          const altGallery = galleries.find(g => g.id === altGalleryId);
 
-      if (prefetched) {
-        // Use prefetched data - instant!
-        setCurrentGallery(prefetched.gallery);
-        setMediaBlocks(prefetched.mediaBlocks);
+          if (altGallery) {
+            const { data: altBlocks } = await supabase
+              .from('media_blocks')
+              .select('*')
+              .eq('gallery_id', altGallery.id)
+              .order('position', { ascending: true });
+
+            if (altBlocks && altBlocks.length > 0) {
+              setCurrentGallery(altGallery as Gallery);
+              setMediaBlocks(altBlocks as MediaBlock[]);
+              setLoading(false);
+              return;
+            }
+          }
+        }
+
+        setError('No galleries available');
         setLoading(false);
         return;
       }
-
-      // Use blocks from the single query (already fetched with gallery)
-      // Sort by position to ensure correct order
-      const blocks = [...targetGallery.media_blocks].sort((a, b) => a.position - b.position);
 
       setCurrentGallery(targetGallery as Gallery);
       setMediaBlocks(blocks as MediaBlock[]);
@@ -372,11 +317,7 @@ export default function PublicGalleryViewer() {
     <div className="space-y-6">
       {mediaBlocks.map((block) => (
         <div key={block.id} className="w-full">
-          <MediaBlockComponent
-            block={block}
-            onLoad={handleBlockLoad}
-            isRevealed={allBlocksRevealed}
-          />
+          <MediaBlockComponent block={block} />
         </div>
       ))}
     </div>
@@ -427,18 +368,6 @@ export default function PublicGalleryViewer() {
 
   // Adaptive viewport centering layout
   if (shouldCenterVertically) {
-    // Show loading state while calculating layout
-    if (isCalculating && !allBlocksRevealed) {
-      return (
-        <div className="h-dvh bg-[#F9F8F6] flex flex-col items-center justify-center">
-          <div className="text-foreground/40 text-sm">Loading...</div>
-          <p className="absolute bottom-8 text-sm font-medium text-foreground/20 tracking-wide">
-            galleriii
-          </p>
-        </div>
-      );
-    }
-
     // Centered mode - content fits on screen
     if (layoutMode === 'centered') {
       return (
